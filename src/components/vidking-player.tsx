@@ -83,6 +83,7 @@ export function VidkingPlayer({
         height="100%"
         frameBorder="0"
         allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         className="absolute inset-0"
         allow="autoplay; fullscreen"
       />
