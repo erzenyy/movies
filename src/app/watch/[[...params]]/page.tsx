@@ -34,6 +34,7 @@ export default function WatchPage() {
   const [details, setDetails] = useState<MovieDetails | TVShowDetails | null>(null);
   const [tvmazeDetails, setTvmazeDetails] = useState<TVShow | null>(null);
   const [resolvedTmdbId, setResolvedTmdbId] = useState<string | null>(null);
+  const [resolvedStrategy, setResolvedStrategy] = useState<string | null>(null);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isResolvingId, setIsResolvingId] = useState(false);
@@ -54,12 +55,16 @@ export default function WatchPage() {
             const params = new URLSearchParams({ type: mediaType });
             if (imdbId) params.set('imdb', imdbId);
             if (name) params.set('name', name);
+            if (tvmaze?.first_air_date) {
+              params.set('year', tvmaze.first_air_date.slice(0, 4));
+            }
 
             const res = await fetch(`/api/resolve-id?${params.toString()}`);
             if (res.ok) {
               const data = await res.json();
               if (data.tmdbId) {
                 setResolvedTmdbId(String(data.tmdbId));
+                setResolvedStrategy(data.strategy ?? null);
 
                 // Now try to fetch TMDB details with the resolved ID
                 try {
@@ -85,6 +90,7 @@ export default function WatchPage() {
         } else {
           // Direct TMDB source
           setResolvedTmdbId(id);
+          setResolvedStrategy('direct');
           if (mediaType === 'movie') {
             const detailsData = await getMovieDetails(numericId);
             setDetails(detailsData);
@@ -109,9 +115,9 @@ export default function WatchPage() {
     return (
       <div className="min-h-screen bg-zinc-950">
         <Header />
-        <main className="pt-20">
+        <main className="pt-[calc(4rem+env(safe-area-inset-top,0px))] sm:pt-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Skeleton className="aspect-video w-full rounded-lg" />
+            <Skeleton className="aspect-video w-full rounded-none sm:rounded-lg" />
           </div>
         </main>
       </div>
@@ -145,6 +151,7 @@ export default function WatchPage() {
     : (hasDetails && 'episode_run_time' in details! ? (details!.episode_run_time?.[0] || 0) : 0);
   const genres = hasDetails ? (details!.genres || []) : [];
   const tagline = hasDetails ? details!.tagline : undefined;
+  const imdbId = hasDetails && 'imdb_id' in details! ? details!.imdb_id : tvmazeDetails?._imdbId ?? null;
 
   // Poster: TMDB path or TVMaze direct URL
   const posterSrc = hasDetails && details!.poster_path
@@ -157,22 +164,22 @@ export default function WatchPage() {
     <div className="min-h-screen bg-zinc-950">
       <Header />
       
-      <main className="pt-16 lg:pt-20">
+      <main className="pt-[calc(4rem+env(safe-area-inset-top,0px))] sm:pt-16 lg:pt-20 pb-[env(safe-area-inset-bottom,0px)]">
         {/* Back Button */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <Link href="/">
-            <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-zinc-800 gap-2">
-              <ArrowLeft className="w-4 h-4" />
+            <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-zinc-800 gap-2 -ml-2 sm:ml-0 text-sm sm:text-base">
+              <ArrowLeft className="w-4 h-4 shrink-0" />
               Back to Browse
             </Button>
           </Link>
         </div>
 
         {/* Video Player */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
           {isResolvingId ? (
-            <div className="aspect-video w-full rounded-lg bg-zinc-900 flex items-center justify-center">
-              <div className="text-center">
+            <div className="aspect-video w-full rounded-none sm:rounded-lg bg-zinc-900 flex items-center justify-center">
+              <div className="text-center px-4">
                 <Loader2 className="w-8 h-8 text-red-500 animate-spin mx-auto mb-2" />
                 <p className="text-zinc-400 text-sm">Resolving player...</p>
               </div>
@@ -189,8 +196,8 @@ export default function WatchPage() {
               episodeSelector={mediaType === 'tv'}
             />
           ) : (
-            <div className="aspect-video w-full rounded-lg bg-zinc-900 flex items-center justify-center">
-              <div className="text-center max-w-md">
+            <div className="aspect-video w-full rounded-none sm:rounded-lg bg-zinc-900 flex items-center justify-center">
+              <div className="text-center max-w-md px-4">
                 <Film className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
                 <p className="text-white font-semibold mb-1">Player unavailable</p>
                 <p className="text-zinc-400 text-sm">
@@ -202,10 +209,10 @@ export default function WatchPage() {
         </div>
 
         {/* Movie Info */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Left Column - Poster & Actions */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 max-w-[220px] sm:max-w-[260px] mx-auto w-full lg:max-w-none lg:mx-0">
               <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-2xl">
                 {posterSrc ? (
                   <Image
@@ -223,13 +230,13 @@ export default function WatchPage() {
                 )}
               </div>
               
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" className="flex-1 border-zinc-700 text-white hover:bg-zinc-800">
-                  <Heart className="w-4 h-4 mr-2" />
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <Button variant="outline" className="flex-1 border-zinc-700 text-white hover:bg-zinc-800 min-h-11">
+                  <Heart className="w-4 h-4 mr-2 shrink-0" />
                   Favorite
                 </Button>
-                <Button variant="outline" className="flex-1 border-zinc-700 text-white hover:bg-zinc-800">
-                  <Share2 className="w-4 h-4 mr-2" />
+                <Button variant="outline" className="flex-1 border-zinc-700 text-white hover:bg-zinc-800 min-h-11">
+                  <Share2 className="w-4 h-4 mr-2 shrink-0" />
                   Share
                 </Button>
               </div>
@@ -238,7 +245,7 @@ export default function WatchPage() {
             {/* Right Column - Details */}
             <div className="lg:col-span-2 space-y-6">
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">{title}</h1>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">{title}</h1>
                 <div className="flex flex-wrap items-center gap-3 text-zinc-400">
                   {rating > 0 && (
                     <>
@@ -314,6 +321,24 @@ export default function WatchPage() {
                   <div>
                     <p className="text-sm text-zinc-500">Episodes</p>
                     <p className="text-white">{details!.number_of_episodes}</p>
+                  </div>
+                )}
+                {resolvedTmdbId && (
+                  <div>
+                    <p className="text-sm text-zinc-500">TMDB ID</p>
+                    <p className="text-white">{resolvedTmdbId}</p>
+                  </div>
+                )}
+                {imdbId && (
+                  <div>
+                    <p className="text-sm text-zinc-500">IMDb ID</p>
+                    <p className="text-white">{imdbId}</p>
+                  </div>
+                )}
+                {resolvedStrategy && (
+                  <div>
+                    <p className="text-sm text-zinc-500">Match Source</p>
+                    <p className="text-white">{resolvedStrategy}</p>
                   </div>
                 )}
               </div>

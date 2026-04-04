@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { VideoPlayerProps } from '@/lib/types';
 
 interface VidkingPlayerProps extends VideoPlayerProps {
@@ -75,7 +75,7 @@ export function VidkingPlayer({
   }, [onProgress, onEvent]);
 
   return (
-    <div className="relative w-full aspect-video bg-zinc-950 rounded-lg overflow-hidden">
+    <div className="relative w-full aspect-video bg-zinc-950 rounded-none sm:rounded-lg overflow-hidden">
       <iframe
         ref={iframeRef}
         src={getEmbedUrl()}

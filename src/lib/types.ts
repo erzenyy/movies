@@ -1,3 +1,6 @@
+export type MediaType = 'movie' | 'tv';
+export type MediaSource = 'tmdb' | 'tvmaze';
+
 export interface Movie {
   id: number;
   title: string;
@@ -8,10 +11,13 @@ export interface Movie {
   vote_average: number;
   vote_count: number;
   genre_ids: number[];
-  media_type?: 'movie' | 'tv';
-  _source?: 'tmdb' | 'tvmaze';
+  media_type?: MediaType;
+  _source?: MediaSource;
+  _tmdbId?: number | null;
   _imdbId?: string | null;
+  _tvmazeId?: number | null;
   _tvmazeImage?: string | null;
+  _matchConfidence?: number | null;
 }
 
 export interface TVShow {
@@ -24,10 +30,13 @@ export interface TVShow {
   vote_average: number;
   vote_count: number;
   genre_ids: number[];
-  media_type?: 'movie' | 'tv';
-  _source?: 'tmdb' | 'tvmaze';
+  media_type?: MediaType;
+  _source?: MediaSource;
+  _tmdbId?: number | null;
   _imdbId?: string | null;
+  _tvmazeId?: number | null;
   _tvmazeImage?: string | null;
+  _matchConfidence?: number | null;
 }
 
 export interface Genre {
@@ -58,7 +67,7 @@ export interface TVShowDetails extends TVShow {
 
 export interface VideoPlayerProps {
   tmdbId: string;
-  mediaType: 'movie' | 'tv';
+  mediaType: MediaType;
   season?: number;
   episode?: number;
   color?: string;

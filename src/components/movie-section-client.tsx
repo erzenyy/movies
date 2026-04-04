@@ -28,10 +28,10 @@ export function MovieSectionClient({ title, movies, mediaType = 'movie' }: Movie
   if (!movies || movies.length === 0) return null;
 
   return (
-    <section className="py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
+    <section className="py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
+          <h2 className="min-w-0 pr-2 text-lg font-bold leading-snug text-white sm:text-2xl">{title}</h2>
           <div className="flex gap-2">
             <Button
               variant="ghost"
@@ -54,11 +54,11 @@ export function MovieSectionClient({ title, movies, mediaType = 'movie' }: Movie
 
         <div
           ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+          className="flex gap-3 sm:gap-4 overflow-x-auto overscroll-x-contain scrollbar-hide pb-4 -mx-3 px-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory scroll-pl-3 sm:scroll-pl-6"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {movies.map((movie) => (
-            <div key={movie.id} className="flex-shrink-0 w-40 sm:w-48 lg:w-52">
+            <div key={movie.id} className="flex-shrink-0 w-[9.25rem] sm:w-48 lg:w-52 snap-start">
               <MovieCard movie={movie} mediaType={mediaType} />
             </div>
           ))}

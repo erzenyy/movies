@@ -1,60 +1,152 @@
 import { Header } from '@/components/header';
 import { MovieSectionClient } from '@/components/movie-section-client';
-import { getPopularMovies, getTopRatedMovies, getNowPlaying, getUpcomingMovies, isApiKeyConfigured } from '@/lib/tmdb';
+import { BrowseExploreBar } from '@/components/browse-explore-bar';
+import { BrowseMediaGrid } from '@/components/browse-media-grid';
+import { BrowsePagination } from '@/components/browse-pagination';
+import {
+  isApiKeyConfigured,
+  getGenres,
+  discoverMovies,
+  searchMoviesPaged,
+  fetchMoviesFromEndpoint,
+} from '@/lib/tmdb';
 import { getPopularTVMazeShows, getTopRatedTVMazeShows } from '@/lib/tvmaze';
 
-export default async function MoviesPage() {
-  const tmdbAvailable = isApiKeyConfigured();
+function firstString(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v;
+}
 
-  let nowPlaying: Awaited<ReturnType<typeof getNowPlaying>> = [];
-  let popular: typeof nowPlaying = [];
-  let topRated: typeof nowPlaying = [];
-  let upcoming: typeof nowPlaying = [];
+export default async function MoviesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = (firstString(sp.q) ?? '').trim();
+  const page = Math.max(1, parseInt(firstString(sp.page) ?? '1', 10) || 1);
+  const sort = firstString(sp.sort) ?? 'popularity.desc';
+  const gRaw = firstString(sp.g);
+  const yearRaw = firstString(sp.year);
+  const genreId = gRaw && /^\d+$/.test(gRaw) ? parseInt(gRaw, 10) : undefined;
+  const year = yearRaw && /^\d{4}$/.test(yearRaw) ? parseInt(yearRaw, 10) : undefined;
+
+  const tmdbAvailable = isApiKeyConfigured();
+  const genres = tmdbAvailable ? await getGenres() : [];
+
+  let browse: {
+    results: Awaited<ReturnType<typeof discoverMovies>>['results'];
+    page: number;
+    totalPages: number;
+    totalResults: number;
+    mode: 'search' | 'discover';
+  } | null = null;
 
   if (tmdbAvailable) {
-    [nowPlaying, popular, topRated, upcoming] = await Promise.all([
-      getNowPlaying(),
-      getPopularMovies(),
-      getTopRatedMovies(),
-      getUpcomingMovies(),
-    ]);
+    if (q.length > 0) {
+      const r = await searchMoviesPaged(q, page);
+      browse = { ...r, mode: 'search' };
+    } else {
+      const r = await discoverMovies({
+        page,
+        sortBy: sort,
+        genreId: genreId !== undefined && Number.isFinite(genreId) ? genreId : undefined,
+        year: year !== undefined && Number.isFinite(year) ? year : undefined,
+      });
+      browse = { ...r, mode: 'discover' };
+    }
   }
 
-  const hasTmdb = nowPlaying.length > 0 || popular.length > 0;
+  const [nowPlaying, popular, topRated, upcoming] = tmdbAvailable
+    ? await Promise.all([
+        fetchMoviesFromEndpoint('/movie/now_playing', [1, 2, 3]),
+        fetchMoviesFromEndpoint('/movie/popular', [1, 2, 3]),
+        fetchMoviesFromEndpoint('/movie/top_rated', [1, 2, 3]),
+        fetchMoviesFromEndpoint('/movie/upcoming', [1, 2, 3]),
+      ])
+    : [[], [], [], []];
 
-  // If no TMDB, show TVMaze TV content as fallback
+  const hasTmdbRows = nowPlaying.length > 0 || popular.length > 0;
+
   let tvmazeFallback: Awaited<ReturnType<typeof getPopularTVMazeShows>> = [];
   let tvmazeTopRated: typeof tvmazeFallback = [];
-  if (!hasTmdb) {
+  if (!hasTmdbRows) {
     [tvmazeFallback, tvmazeTopRated] = await Promise.all([
       getPopularTVMazeShows(),
       getTopRatedTVMazeShows(),
     ]);
   }
 
+  const paginationParams: Record<string, string | undefined> = {};
+  if (q) paginationParams.q = q;
+  if (browse?.mode === 'discover') {
+    if (genreId !== undefined) paginationParams.g = String(genreId);
+    if (year !== undefined) paginationParams.year = String(year);
+    paginationParams.sort = sort;
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <Header />
-      
-      <main className="pt-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">Movies</h1>
-          <p className="text-zinc-400 text-lg">
-            {hasTmdb
-              ? 'Discover the latest and greatest movies from around the world'
-              : 'TMDB API key not configured. Showing TV shows from TVMaze instead.'}
+
+      <main className="pt-[calc(5rem+env(safe-area-inset-top,0px))] sm:pt-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h1 className="mb-3 text-3xl font-bold text-white sm:mb-4 sm:text-4xl">Movies</h1>
+          <p className="mb-8 max-w-2xl text-base text-zinc-400 sm:mb-10 sm:text-lg">
+            {tmdbAvailable
+              ? 'Browse the full TMDB movie catalog worldwide—search, filter by genre and year, and explore curated rows below.'
+              : 'TMDB API key not configured. Add NEXT_PUBLIC_TMDB_API_KEY to unlock browse and filters. Showing TV from TVMaze below.'}
           </p>
+
+          {tmdbAvailable && browse && (
+            <>
+              <BrowseExploreBar
+                basePath="/movies"
+                variant="movie"
+                genres={genres}
+                current={{
+                  q: q || undefined,
+                  g: genreId !== undefined ? String(genreId) : undefined,
+                  sort,
+                  year: year !== undefined ? String(year) : undefined,
+                }}
+              />
+              <BrowseMediaGrid
+                title={q ? `Results for “${q}”` : 'Discover movies'}
+                subtitle={
+                  browse.totalResults > 0
+                    ? `${browse.totalResults.toLocaleString()} titles · Page ${browse.page} of ${browse.totalPages}`
+                    : undefined
+                }
+                items={browse.results}
+                mediaType="movie"
+                emptyMessage={
+                  q
+                    ? 'No movies matched your search. Try different keywords or clear the search box.'
+                    : 'No movies match these filters. Try another genre or year.'
+                }
+              />
+              <BrowsePagination
+                basePath="/movies"
+                page={browse.page}
+                totalPages={browse.totalPages}
+                params={paginationParams}
+              />
+            </>
+          )}
         </div>
 
-        <div className="space-y-4">
-          {hasTmdb ? (
+        <div className="mt-6 space-y-4">
+          {hasTmdbRows && (
             <>
               <MovieSectionClient title="Now Playing" movies={nowPlaying} mediaType="movie" />
-              <MovieSectionClient title="Popular Movies" movies={popular} mediaType="movie" />
+              <MovieSectionClient title="Popular Worldwide" movies={popular} mediaType="movie" />
               <MovieSectionClient title="Top Rated" movies={topRated} mediaType="movie" />
               <MovieSectionClient title="Coming Soon" movies={upcoming} mediaType="movie" />
             </>
-          ) : (
+          )}
+
+          {!hasTmdbRows && (
             <>
               {tvmazeFallback.length > 0 && (
                 <MovieSectionClient title="Airing Today" movies={tvmazeFallback} mediaType="tv" />

@@ -51,11 +51,12 @@ export default async function Home() {
       <Header />
       
       <main>
-        <Suspense fallback={<div className="h-[70vh] bg-zinc-950" />}>
+        <Suspense fallback={<div className="min-h-[28rem] bg-zinc-950 sm:min-h-[32rem] lg:min-h-[560px]" />}>
           <Hero />
         </Suspense>
 
-        <div className="space-y-4 -mt-20 relative z-10">
+        {/* Overlap hero only from md up — on mobile negative margin hid the CTA under "Trending" */}
+        <div className="relative z-10 space-y-4 max-md:mt-0 max-md:pt-4 md:-mt-20 md:pt-0">
           {/* TMDB sections - shown when TMDB works */}
           {hasTmdb && (
             <>
@@ -95,9 +96,9 @@ export default async function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800 bg-zinc-950 py-12 mt-16">
+      <footer className="border-t border-zinc-800 bg-zinc-950 py-10 sm:py-12 mt-12 sm:mt-16 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-white">
                 Movie<span className="text-red-500">Flix</span>

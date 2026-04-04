@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Play, Star, Calendar, Film } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Movie, TVShow } from '@/lib/types';
+import { getCanonicalTmdbId } from '@/lib/media';
 import { getImageUrl } from '@/lib/tmdb';
 
 interface MovieCardProps {
@@ -18,15 +19,16 @@ export function MovieCard({ movie, mediaType = 'movie' }: MovieCardProps) {
   
   const title = 'title' in movie ? movie.title : movie.name;
   const date = 'release_date' in movie ? movie.release_date : movie.first_air_date;
+  const watchId = getCanonicalTmdbId(movie) ?? movie.id;
   const href = mediaType === 'tv' 
-    ? `/watch/tv/${movie.id}/1/1` 
-    : `/watch/movie/${movie.id}`;
+    ? `/watch/tv/${watchId}/1/1` 
+    : `/watch/movie/${watchId}`;
   const rating = movie.vote_average ?? 0;
 
   return (
     <Link href={href}>
       <div 
-        className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/10"
+        className="group relative overflow-hidden rounded-lg cursor-pointer transition-all duration-300 sm:hover:scale-105 sm:hover:shadow-2xl sm:hover:shadow-red-500/10 active:opacity-95 sm:active:scale-100"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -40,7 +42,7 @@ export function MovieCard({ movie, mediaType = 'movie' }: MovieCardProps) {
               }
               alt={title}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              className="object-cover transition-transform duration-500 sm:group-hover:scale-110"
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
             />
           ) : (
@@ -53,10 +55,10 @@ export function MovieCard({ movie, mediaType = 'movie' }: MovieCardProps) {
           )}
           
           {/* Gradient overlay */}
-          <div className={`absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-90' : 'opacity-0'}`} />
+          <div className={`absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent transition-opacity duration-300 hidden sm:block ${isHovered ? 'opacity-90' : 'opacity-0'}`} />
           
-          {/* Play button */}
-          <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+          {/* Play button — desktop hover only; mobile shows title strip */}
+          <div className={`absolute inset-0 hidden sm:flex items-center justify-center transition-all duration-300 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
             <div className="w-14 h-14 rounded-full bg-red-600/90 flex items-center justify-center shadow-lg shadow-red-600/30 backdrop-blur-sm">
               <Play className="w-6 h-6 text-white fill-white ml-0.5" />
             </div>
@@ -73,8 +75,8 @@ export function MovieCard({ movie, mediaType = 'movie' }: MovieCardProps) {
           )}
           
           {/* Bottom gradient always visible for title */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent p-3 pt-8">
-            <h3 className="font-semibold text-white text-sm line-clamp-1">{title}</h3>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/85 to-transparent p-2.5 pt-10 sm:p-3 sm:pt-8">
+            <h3 className="line-clamp-2 text-left text-xs font-semibold leading-tight text-white sm:text-sm">{title}</h3>
             <div className="flex items-center gap-1.5 text-zinc-400 text-xs mt-0.5">
               <Calendar className="w-3 h-3" />
               <span>{date ? new Date(date).getFullYear() : 'N/A'}</span>

@@ -1,4 +1,5 @@
 import { Movie, TVShow } from './types';
+import { filterUniqueMedia } from './media';
 
 const TVMAZE_BASE_URL = 'https://api.tvmaze.com';
 
@@ -39,7 +40,9 @@ const tvmazeToTVShow = (show: TVMazeShow): TVShow => ({
   genre_ids: [],
   media_type: 'tv',
   _source: 'tvmaze',
+  _tmdbId: null,
   _imdbId: show.externals?.imdb || null,
+  _tvmazeId: show.id,
   _tvmazeImage: show.image?.medium || null,
 });
 
@@ -157,12 +160,5 @@ export const deduplicateTVMaze = (
   tvmazeShows: TVShow[],
   tmdbItems: (Movie | TVShow)[]
 ): TVShow[] => {
-  const tmdbNames = new Set(
-    tmdbItems.map((item) =>
-      ('title' in item ? item.title : item.name).toLowerCase().trim()
-    )
-  );
-  return tvmazeShows.filter(
-    (show) => !tmdbNames.has(show.name.toLowerCase().trim())
-  );
+  return filterUniqueMedia(tvmazeShows, tmdbItems, 'tv');
 };
