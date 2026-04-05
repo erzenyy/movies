@@ -44,6 +44,14 @@ export interface Genre {
   name: string;
 }
 
+/** TMDB `belongs_to_collection` on movie details (e.g. Harry Potter series). */
+export interface BelongsToCollection {
+  id: number;
+  name: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+}
+
 export interface MovieDetails extends Movie {
   genres: Genre[];
   runtime: number;
@@ -53,6 +61,7 @@ export interface MovieDetails extends Movie {
   revenue: number;
   homepage: string | null;
   imdb_id: string | null;
+  belongs_to_collection?: BelongsToCollection | null;
 }
 
 export interface TVShowDetails extends TVShow {

@@ -78,6 +78,7 @@ export function VidkingPlayer({
     <div className="relative w-full aspect-video bg-zinc-950 rounded-none sm:rounded-lg overflow-hidden">
       <iframe
         ref={iframeRef}
+        title={`Streaming player for ${mediaType} ${tmdbId}`}
         src={getEmbedUrl()}
         width="100%"
         height="100%"
@@ -85,7 +86,8 @@ export function VidkingPlayer({
         allowFullScreen
         sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         className="absolute inset-0"
-        allow="autoplay; fullscreen"
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+        referrerPolicy="no-referrer"
       />
     </div>
   );

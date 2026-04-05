@@ -105,7 +105,7 @@ export default async function Home() {
               </span>
             </div>
             <p className="text-zinc-500 text-sm">
-              Powered by TMDB, TVMaze & Vidking Player. Built with Next.js.
+              Powered by TMDB, TVMaze & multiple embed sources. Built with Next.js.
             </p>
           </div>
         </div>

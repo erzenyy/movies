@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "MovieFlix - Watch Movies & TV Shows Online",
-  description: "Stream thousands of movies and TV shows online. Powered by TMDB and Vidking Player.",
+  description: "Stream thousands of movies and TV shows online. Powered by TMDB and embed players.",
 };
 
 export const viewport: Viewport = {

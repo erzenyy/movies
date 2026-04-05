@@ -290,6 +290,23 @@ export const getSimilarMovies = async (id: number): Promise<Movie[]> => {
   return annotateTmdbResults(data.results || []);
 };
 
+/** Other films in the same TMDB collection (franchise), e.g. Harry Potter sequels. */
+export const getMovieCollectionParts = async (
+  collectionId: number
+): Promise<{ name: string; parts: Movie[] } | null> => {
+  if (!isApiKeyConfigured()) return null;
+  try {
+    const data = await fetchFromTMDB(`/collection/${collectionId}`);
+    const raw = data?.parts;
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const parts = annotateTmdbResults(raw);
+    parts.sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''));
+    return { name: typeof data.name === 'string' ? data.name : 'Collection', parts };
+  } catch {
+    return null;
+  }
+};
+
 export const getGenres = async (): Promise<{ id: number; name: string }[]> => {
   const data = await fetchFromTMDB('/genre/movie/list');
   return data.genres || [];

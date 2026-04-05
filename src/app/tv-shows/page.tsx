@@ -126,6 +126,17 @@ export default async function TVShowsPage({
           {tmdbAvailable && browse && (
             <>
               <BrowseExploreBar
+                key={JSON.stringify({
+                  q: q || '',
+                  g: genreId ?? '',
+                  sort,
+                  year: year ?? '',
+                  lang: lang ?? '',
+                  origin: origin ?? '',
+                  rating: rating ?? '',
+                  votes: votes ?? '',
+                  runtime: runtimeRaw ?? '',
+                })}
                 basePath="/tv-shows"
                 variant="tv"
                 genres={genres}

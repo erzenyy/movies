@@ -125,6 +125,17 @@ export default async function MoviesPage({
           {tmdbAvailable && browse && (
             <>
               <BrowseExploreBar
+                key={JSON.stringify({
+                  q: q || '',
+                  g: genreId ?? '',
+                  sort,
+                  year: year ?? '',
+                  lang: lang ?? '',
+                  origin: origin ?? '',
+                  rating: rating ?? '',
+                  votes: votes ?? '',
+                  runtime: runtimeRaw ?? '',
+                })}
                 basePath="/movies"
                 variant="movie"
                 genres={genres}

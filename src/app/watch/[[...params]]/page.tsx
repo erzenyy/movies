@@ -9,11 +9,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { VidkingPlayer } from '@/components/vidking-player';
+import { StreamingEmbedPlayer } from '@/components/streaming-embed-player';
 import { MovieSectionClient } from '@/components/movie-section-client';
 import { Header } from '@/components/header';
 import { Movie, TVShow, MovieDetails, TVShowDetails } from '@/lib/types';
-import { getMovieDetails, getTVShowDetails, getImageUrl, getSimilarMovies } from '@/lib/tmdb';
+import {
+  getMovieDetails,
+  getTVShowDetails,
+  getImageUrl,
+  getSimilarMovies,
+  getMovieCollectionParts,
+} from '@/lib/tmdb';
 import { getTVMazeShowDetails } from '@/lib/tvmaze';
 
 const TVMAZE_ID_OFFSET = 900000;
@@ -36,18 +42,41 @@ export default function WatchPage() {
   const [resolvedTmdbId, setResolvedTmdbId] = useState<string | null>(null);
   const [resolvedStrategy, setResolvedStrategy] = useState<string | null>(null);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
+  const [collectionMovies, setCollectionMovies] = useState<Movie[]>([]);
+  const [collectionTitle, setCollectionTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isResolvingId, setIsResolvingId] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
+      const loadCollectionForMovie = async (movieDetails: MovieDetails) => {
+        if (!movieDetails.belongs_to_collection?.id) {
+          setCollectionMovies([]);
+          setCollectionTitle(null);
+          return;
+        }
+        const col = await getMovieCollectionParts(movieDetails.belongs_to_collection.id);
+        if (!col) {
+          setCollectionMovies([]);
+          setCollectionTitle(null);
+          return;
+        }
+        const others = col.parts.filter((m) => m.id !== movieDetails.id);
+        setCollectionTitle(col.name);
+        setCollectionMovies(others);
+      };
+
       try {
+        setSimilarMovies([]);
+        setCollectionMovies([]);
+        setCollectionTitle(null);
+
         if (isTVMazeSource && tvmazeRealId !== null) {
           // TVMaze source: get TVMaze details and resolve TMDB ID
           const tvmaze = await getTVMazeShowDetails(tvmazeRealId);
           setTvmazeDetails(tvmaze);
 
-          // Resolve TMDB ID for Vidking player
+          // Resolve TMDB ID for embed players
           setIsResolvingId(true);
           try {
             const imdbId = tvmaze?._imdbId;
@@ -70,7 +99,10 @@ export default function WatchPage() {
                 try {
                   if (mediaType === 'movie') {
                     const tmdbDetails = await getMovieDetails(data.tmdbId);
-                    if (tmdbDetails && tmdbDetails.id) setDetails(tmdbDetails);
+                    if (tmdbDetails && tmdbDetails.id) {
+                      setDetails(tmdbDetails);
+                      await loadCollectionForMovie(tmdbDetails);
+                    }
                     const similar = await getSimilarMovies(data.tmdbId);
                     setSimilarMovies(similar);
                   } else {
@@ -94,6 +126,7 @@ export default function WatchPage() {
           if (mediaType === 'movie') {
             const detailsData = await getMovieDetails(numericId);
             setDetails(detailsData);
+            await loadCollectionForMovie(detailsData);
             const similar = await getSimilarMovies(numericId);
             setSimilarMovies(similar);
           } else {
@@ -185,7 +218,7 @@ export default function WatchPage() {
               </div>
             </div>
           ) : resolvedTmdbId ? (
-            <VidkingPlayer
+            <StreamingEmbedPlayer
               tmdbId={playerTmdbId}
               mediaType={mediaType}
               season={season ? Number(season) : undefined}
@@ -346,14 +379,23 @@ export default function WatchPage() {
           </div>
         </div>
 
-        {/* Similar Movies Section */}
-        {similarMovies.length > 0 && (
+        {/* Collection (franchise) + similar */}
+        {(collectionMovies.length > 0 || similarMovies.length > 0) && (
           <div className="pb-12">
-            <MovieSectionClient
-              title="More Like This"
-              movies={similarMovies}
-              mediaType={mediaType}
-            />
+            {collectionMovies.length > 0 && collectionTitle && mediaType === 'movie' && (
+              <MovieSectionClient
+                title={collectionTitle}
+                movies={collectionMovies}
+                mediaType="movie"
+              />
+            )}
+            {similarMovies.length > 0 && (
+              <MovieSectionClient
+                title="More Like This"
+                movies={similarMovies}
+                mediaType={mediaType}
+              />
+            )}
           </div>
         )}
       </main>
