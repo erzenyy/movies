@@ -209,6 +209,12 @@ export const discoverMovies = async (opts: {
   sortBy?: string;
   genreId?: number;
   year?: number;
+  originalLanguage?: string;
+  originCountry?: string;
+  minRating?: number;
+  minVotes?: number;
+  runtimeGte?: number;
+  runtimeLte?: number;
 }): Promise<PagedList<Movie>> => {
   if (!isApiKeyConfigured()) {
     return { results: [], page: 1, totalPages: 0, totalResults: 0 };
@@ -218,7 +224,13 @@ export const discoverMovies = async (opts: {
   let extra = `&page=${page}&sort_by=${encodeURIComponent(sort)}`;
   if (opts.genreId) extra += `&with_genres=${opts.genreId}`;
   if (opts.year) extra += `&primary_release_year=${opts.year}`;
-  extra += '&vote_count.gte=40';
+  if (opts.originalLanguage) extra += `&with_original_language=${encodeURIComponent(opts.originalLanguage)}`;
+  if (opts.originCountry) extra += `&with_origin_country=${encodeURIComponent(opts.originCountry)}`;
+  if (opts.minRating !== undefined) extra += `&vote_average.gte=${opts.minRating}`;
+  if (opts.minVotes !== undefined) extra += `&vote_count.gte=${opts.minVotes}`;
+  else extra += '&vote_count.gte=40';
+  if (opts.runtimeGte !== undefined) extra += `&with_runtime.gte=${opts.runtimeGte}`;
+  if (opts.runtimeLte !== undefined) extra += `&with_runtime.lte=${opts.runtimeLte}`;
   const data = await fetchFromTMDB('/discover/movie', extra);
   return {
     results: annotateTmdbResults(data.results || []),
@@ -233,6 +245,12 @@ export const discoverTVShows = async (opts: {
   sortBy?: string;
   genreId?: number;
   year?: number;
+  originalLanguage?: string;
+  originCountry?: string;
+  minRating?: number;
+  minVotes?: number;
+  runtimeGte?: number;
+  runtimeLte?: number;
 }): Promise<PagedList<TVShow>> => {
   if (!isApiKeyConfigured()) {
     return { results: [], page: 1, totalPages: 0, totalResults: 0 };
@@ -242,7 +260,13 @@ export const discoverTVShows = async (opts: {
   let extra = `&page=${page}&sort_by=${encodeURIComponent(sort)}`;
   if (opts.genreId) extra += `&with_genres=${opts.genreId}`;
   if (opts.year) extra += `&first_air_date_year=${opts.year}`;
-  extra += '&vote_count.gte=25';
+  if (opts.originalLanguage) extra += `&with_original_language=${encodeURIComponent(opts.originalLanguage)}`;
+  if (opts.originCountry) extra += `&with_origin_country=${encodeURIComponent(opts.originCountry)}`;
+  if (opts.minRating !== undefined) extra += `&vote_average.gte=${opts.minRating}`;
+  if (opts.minVotes !== undefined) extra += `&vote_count.gte=${opts.minVotes}`;
+  else extra += '&vote_count.gte=25';
+  if (opts.runtimeGte !== undefined) extra += `&with_runtime.gte=${opts.runtimeGte}`;
+  if (opts.runtimeLte !== undefined) extra += `&with_runtime.lte=${opts.runtimeLte}`;
   const data = await fetchFromTMDB('/discover/tv', extra);
   return {
     results: annotateTmdbResults(data.results || []),

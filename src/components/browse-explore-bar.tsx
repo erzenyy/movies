@@ -1,27 +1,24 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
-const SORT_MOVIE = [
-  { value: 'popularity.desc', label: 'Most popular' },
-  { value: 'vote_average.desc', label: 'Highest rated' },
-  { value: 'release_date.desc', label: 'Newest releases' },
-  { value: 'revenue.desc', label: 'Box office' },
-] as const;
-
-const SORT_TV = [
-  { value: 'popularity.desc', label: 'Most popular' },
-  { value: 'vote_average.desc', label: 'Highest rated' },
-  { value: 'first_air_date.desc', label: 'Newest seasons' },
-] as const;
-
-function yearOptions(from = new Date().getFullYear(), back = 70) {
-  const years: { value: string; label: string }[] = [{ value: '', label: 'Any year' }];
-  for (let y = from; y >= from - back; y--) {
-    years.push({ value: String(y), label: String(y) });
-  }
-  return years;
-}
+import {
+  BrowseVariant,
+  BrowseCurrent,
+  getLanguageOptions,
+  getOriginOptions,
+  getQuickFilterLinks,
+  getRatingOptions,
+  getRuntimeOptions,
+  getSortOptions,
+  getVoteOptions,
+  normalizeBrowseCurrent,
+} from '@/lib/browse-filters';
+import { buildBrowseQuery } from '@/lib/browse-url';
 
 export function BrowseExploreBar({
   basePath,
@@ -30,100 +27,284 @@ export function BrowseExploreBar({
   current,
 }: {
   basePath: '/movies' | '/tv-shows';
-  variant: 'movie' | 'tv';
+  variant: BrowseVariant;
   genres: { id: number; name: string }[];
-  current: { q?: string; g?: string; sort?: string; year?: string };
+  current: BrowseCurrent;
 }) {
-  const sortOptions = variant === 'movie' ? SORT_MOVIE : SORT_TV;
-  const years = yearOptions();
-  const defaultSort = variant === 'movie' ? 'popularity.desc' : 'popularity.desc';
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const normalizedCurrent = useMemo(
+    () => normalizeBrowseCurrent(current, variant),
+    [current, variant]
+  );
+
+  const [formState, setFormState] = useState(normalizedCurrent);
+
+  useEffect(() => {
+    setFormState(normalizedCurrent);
+  }, [normalizedCurrent]);
+
+  const sortOptions = getSortOptions(variant);
+  const years = useMemo(() => {
+    const from = new Date().getFullYear();
+    const options: { value: string; label: string }[] = [{ value: '', label: 'Any Year' }];
+    for (let year = from; year >= from - 80; year -= 1) {
+      options.push({ value: String(year), label: String(year) });
+    }
+    return options;
+  }, []);
+  const runtimeOptions = getRuntimeOptions(variant);
+  const languageOptions = getLanguageOptions();
+  const originOptions = getOriginOptions();
+  const ratingOptions = getRatingOptions();
+  const voteOptions = getVoteOptions();
+  const quickFilters = getQuickFilterLinks(basePath, variant);
+  const searchMode = formState.q.trim().length > 0;
+  const selectClass =
+    'flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-white focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-45';
+
+  const submitForm = (nextState = formState) => {
+    const query = searchMode ? buildBrowseQuery({ q: nextState.q }) : buildBrowseQuery(nextState);
+    startTransition(() => {
+      router.push(`${basePath}${query}`);
+    });
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submitForm();
+  };
+
+  const setField = (field: keyof typeof formState, value: string) => {
+    setFormState((state) => ({
+      ...state,
+      [field]: value,
+    }));
+  };
 
   return (
-    <form
-      action={basePath}
-      method="get"
-      className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4 backdrop-blur-sm sm:p-5"
-    >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-4">
-        <div className="min-w-0 flex-1">
-          <label htmlFor="browse-q" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Search
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input
-              id="browse-q"
-              name="q"
-              type="search"
-              placeholder={variant === 'movie' ? 'Search movies worldwide…' : 'Search TV shows worldwide…'}
-              defaultValue={current.q ?? ''}
-              className="border-zinc-700 bg-zinc-950/80 pl-10 text-white placeholder:text-zinc-600"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:w-[min(100%,42rem)] lg:shrink-0">
-          <div>
-            <label htmlFor="browse-g" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Genre
+    <section className="mt-8 border border-zinc-800 bg-zinc-950/70">
+      <form onSubmit={handleSubmit} className="px-4 py-4 sm:px-5 sm:py-5" autoComplete="off">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_repeat(4,minmax(0,1fr))]">
+          <div className="min-w-0 xl:col-span-2">
+            <label htmlFor={`${variant}-browse-q`} className="mb-1.5 block text-sm text-zinc-400">
+              Search
             </label>
-            <select
-              id="browse-g"
-              name="g"
-              defaultValue={current.g ?? ''}
-              className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-950/80 px-3 text-sm text-white shadow-sm focus-visible:ring-2 focus-visible:ring-red-500/30"
-            >
-              <option value="">All genres</option>
-              {genres.map((g) => (
-                <option key={g.id} value={String(g.id)}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                aria-hidden="true"
+              />
+              <Input
+                id={`${variant}-browse-q`}
+                name="q"
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                placeholder={variant === 'movie' ? 'Search the catalog…' : 'Search series…'}
+                value={formState.q}
+                onChange={(event) => setField('q', event.target.value)}
+                className="border-zinc-800 bg-zinc-950 pl-10 text-white placeholder:text-zinc-600"
+              />
+            </div>
           </div>
+
           <div>
-            <label htmlFor="browse-sort" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <label htmlFor={`${variant}-browse-sort`} className="mb-1.5 block text-sm text-zinc-400">
               Sort
             </label>
             <select
-              id="browse-sort"
+              id={`${variant}-browse-sort`}
               name="sort"
-              defaultValue={current.sort ?? defaultSort}
-              className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-950/80 px-3 text-sm text-white shadow-sm focus-visible:ring-2 focus-visible:ring-red-500/30"
+              value={formState.sort}
+              onChange={(event) => setField('sort', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
             >
-              {sortOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
           </div>
+
           <div>
-            <label htmlFor="browse-year" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <label htmlFor={`${variant}-browse-g`} className="mb-1.5 block text-sm text-zinc-400">
+              Genre
+            </label>
+            <select
+              id={`${variant}-browse-g`}
+              name="g"
+              value={formState.g}
+              onChange={(event) => setField('g', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
+            >
+              <option value="">All Genres</option>
+              {genres.map((genre) => (
+                <option key={genre.id} value={String(genre.id)}>
+                  {genre.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${variant}-browse-year`} className="mb-1.5 block text-sm text-zinc-400">
               Year
             </label>
             <select
-              id="browse-year"
+              id={`${variant}-browse-year`}
               name="year"
-              defaultValue={current.year ?? ''}
-              className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-950/80 px-3 text-sm text-white shadow-sm focus-visible:ring-2 focus-visible:ring-red-500/30"
+              value={formState.year}
+              onChange={(event) => setField('year', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
             >
-              {years.map((y) => (
-                <option key={y.value || 'any'} value={y.value}>
-                  {y.label}
+              {years.map((year) => (
+                <option key={year.value || 'any-year'} value={year.value}>
+                  {year.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-2 xl:self-end">
+            <Link
+              href={basePath}
+              className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-zinc-800 px-3 text-sm text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
+            >
+              Reset
+            </Link>
+            <Button type="submit" className="h-10 flex-1 bg-red-600 text-white hover:bg-red-700">
+              {isPending ? 'Applying…' : 'Apply'}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div>
+            <label htmlFor={`${variant}-browse-lang`} className="mb-1.5 block text-sm text-zinc-400">
+              Language
+            </label>
+            <select
+              id={`${variant}-browse-lang`}
+              name="lang"
+              value={formState.lang}
+              onChange={(event) => setField('lang', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
+            >
+              {languageOptions.map((option) => (
+                <option key={option.value || 'all-languages'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${variant}-browse-origin`} className="mb-1.5 block text-sm text-zinc-400">
+              Origin
+            </label>
+            <select
+              id={`${variant}-browse-origin`}
+              name="origin"
+              value={formState.origin}
+              onChange={(event) => setField('origin', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
+            >
+              {originOptions.map((option) => (
+                <option key={option.value || 'all-origins'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${variant}-browse-rating`} className="mb-1.5 block text-sm text-zinc-400">
+              Minimum Score
+            </label>
+            <select
+              id={`${variant}-browse-rating`}
+              name="rating"
+              value={formState.rating}
+              onChange={(event) => setField('rating', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
+            >
+              {ratingOptions.map((option) => (
+                <option key={option.value || 'any-score'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${variant}-browse-votes`} className="mb-1.5 block text-sm text-zinc-400">
+              Audience Depth
+            </label>
+            <select
+              id={`${variant}-browse-votes`}
+              name="votes"
+              value={formState.votes}
+              onChange={(event) => setField('votes', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
+            >
+              {voteOptions.map((option) => (
+                <option key={option.value || 'any-votes'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${variant}-browse-runtime`} className="mb-1.5 block text-sm text-zinc-400">
+              {variant === 'movie' ? 'Runtime' : 'Episode Length'}
+            </label>
+            <select
+              id={`${variant}-browse-runtime`}
+              name="runtime"
+              value={formState.runtime}
+              onChange={(event) => setField('runtime', event.target.value)}
+              disabled={searchMode}
+              className={selectClass}
+            >
+              {runtimeOptions.map((option) => (
+                <option key={option.value || 'any-runtime'} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        <Button type="submit" className="w-full shrink-0 bg-red-600 hover:bg-red-700 lg:w-auto">
-          Apply
-        </Button>
-      </div>
-      <p className="mt-3 text-xs text-zinc-500">
-        Results include titles from TMDB’s global catalog. Use filters to narrow by genre, year, or sort order.
-      </p>
-    </form>
+        <div className="mt-4 border-t border-zinc-800 pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {quickFilters.map((filter) => (
+              <Link
+                key={filter.label}
+                href={filter.href}
+                className="inline-flex h-8 items-center rounded-md border border-zinc-800 px-3 text-sm text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
+              >
+                {filter.label}
+              </Link>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-zinc-500">
+            {formState.q
+              ? 'Search mode is active. Clear Search to use the full discovery stack and curated suggestion presets.'
+              : 'Use the suggestion links for a faster starting point, then refine with the controls above.'}
+          </p>
+        </div>
+      </form>
+    </section>
   );
 }
