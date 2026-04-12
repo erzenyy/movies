@@ -87,7 +87,7 @@ export function MovieSection({ title, fetchMovies, mediaType = 'movie' }: MovieS
 
         <div
           ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+          className="flex gap-4 overflow-x-auto scrollbar-hide pt-5 pb-10 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [-webkit-overflow-scrolling:touch]"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {movies.map((movie) => (

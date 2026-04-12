@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
 import { Header } from '@/components/header';
 import { MovieSectionClient } from '@/components/movie-section-client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,55 +72,43 @@ export function ForYouClient() {
       <Header />
       <main className="app-shell pb-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <section className="border-b border-zinc-800 pb-6 sm:pb-8">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="mb-3 flex items-center gap-2 text-zinc-500">
-                  <Sparkles className="h-4 w-4 text-red-500" />
-                  <span className="text-sm">Adaptive recommendation feed</span>
-                </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">For You</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
-                  This page learns from what you actually start, finish, revisit, and favorite. The more you watch,
-                  the sharper these shelves become.
+          <header className="border-b border-zinc-800/80 pb-5 pt-1">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+              <div className="min-w-0">
+                <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">For You</h1>
+                <p className="mt-1 max-w-xl text-xs leading-relaxed text-zinc-500 sm:text-sm">
+                  Picks adapt from what you watch—starts, finishes, revisits, and favorites.
                 </p>
               </div>
-
-              <div className="grid grid-cols-2 border border-zinc-800 text-sm sm:grid-cols-4">
-                <div className="border-b border-r border-zinc-800 px-4 py-3 sm:border-b-0">
-                  <div className="text-zinc-500">Tracked</div>
-                  <div className="mt-1 text-lg font-medium text-white">{summary.titlesTracked}</div>
-                </div>
-                <div className="border-b border-zinc-800 px-4 py-3 sm:border-b-0 sm:border-r">
-                  <div className="text-zinc-500">Hours</div>
-                  <div className="mt-1 text-lg font-medium text-white">{summary.totalHours.toFixed(1)}</div>
-                </div>
-                <div className="border-r border-zinc-800 px-4 py-3">
-                  <div className="text-zinc-500">Favorites</div>
-                  <div className="mt-1 text-lg font-medium text-white">{summary.favorites}</div>
-                </div>
-                <div className="px-4 py-3">
-                  <div className="text-zinc-500">Taste</div>
-                  <div className="mt-1 text-sm font-medium text-white">
-                    {taste.topGenres[0]?.name ?? 'Still learning'}
-                  </div>
-                </div>
-              </div>
+              <p
+                className="shrink-0 text-[11px] tabular-nums text-zinc-500 sm:text-xs"
+                aria-label={`${summary.titlesTracked} titles tracked, ${summary.totalHours.toFixed(1)} hours, ${summary.favorites} favorites, ${summary.completed} finished`}
+              >
+                <span className="text-zinc-400">{summary.titlesTracked}</span> tracked
+                <span className="mx-1.5 text-zinc-700" aria-hidden>
+                  ·
+                </span>
+                <span className="text-zinc-400">{summary.totalHours.toFixed(1)}</span>h
+                <span className="mx-1.5 text-zinc-700" aria-hidden>
+                  ·
+                </span>
+                <span className="text-zinc-400">{summary.favorites}</span> fav
+                <span className="mx-1.5 text-zinc-700" aria-hidden>
+                  ·
+                </span>
+                <span className="text-zinc-400">{summary.completed}</span> done
+              </p>
             </div>
 
             {taste.topGenres.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {taste.topGenres.slice(0, 5).map((genre) => (
-                  <span
-                    key={genre.id}
-                    className="inline-flex items-center border border-zinc-800 px-2.5 py-1 text-xs text-zinc-300"
-                  >
-                    {genre.name}
-                  </span>
-                ))}
-              </div>
+              <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-600 sm:text-xs">
+                {taste.topGenres
+                  .slice(0, 5)
+                  .map((g) => g.name)
+                  .join(' · ')}
+              </p>
             )}
-          </section>
+          </header>
         </div>
 
         {continueWatching.length > 0 && (

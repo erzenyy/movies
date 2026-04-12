@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { GoogleCastProvider } from "@/components/google-cast-provider";
 import { cn } from "@/lib/utils";
-
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+import { isGoogleCastConfigured } from "@/lib/google-cast";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
   subsets: ["latin"],
+  variable: "--font-sans",
 });
 
 const geistMono = Geist_Mono({
@@ -35,10 +35,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans")}
     >
       <body className="min-h-full flex flex-col">
+        <GoogleCastProvider />
         {children}
+        {isGoogleCastConfigured() && (
+          <Script
+            src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"
+            strategy="afterInteractive"
+          />
+        )}
         <Script
           src="http://localhost:3001/widget.js"
           strategy="afterInteractive"

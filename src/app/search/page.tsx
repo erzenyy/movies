@@ -92,13 +92,13 @@ function SearchContent() {
           </h1>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 pt-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-7 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {[...Array(12)].map((_, i) => (
                 <Skeleton key={i} className="aspect-[2/3] rounded-lg" />
               ))}
             </div>
           ) : results.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 pt-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-7 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {results.map((item) => (
                 <MovieCard 
                   key={item.id} 

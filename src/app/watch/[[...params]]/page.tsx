@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { StreamingEmbedPlayer } from '@/components/streaming-embed-player';
+import { GoogleCastLauncher } from '@/components/google-cast-launcher';
 import { MovieSectionClient } from '@/components/movie-section-client';
 import { Header } from '@/components/header';
 import { Movie, TVShow, MovieDetails, TVShowDetails } from '@/lib/types';
@@ -22,6 +23,7 @@ import {
 } from '@/lib/tmdb';
 import { getTVMazeShowDetails } from '@/lib/tvmaze';
 import { formatVoteCount } from '@/lib/utils';
+import { getGoogleCastContext, isGoogleCastConfigured, sendGoogleCastPayload } from '@/lib/google-cast';
 import {
   markMediaCompleted,
   makeStoredMediaKey,
@@ -112,6 +114,7 @@ export default function WatchPage() {
   const [collectionTitle, setCollectionTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isResolvingId, setIsResolvingId] = useState(false);
+  const [castSource, setCastSource] = useState<{ embedUrl: string; providerLabel: string } | null>(null);
   const profile = useUserProfile();
 
   useEffect(() => {
@@ -276,6 +279,7 @@ export default function WatchPage() {
   const isSavedForLater = currentEntry?.savedForLater ?? false;
   const preference = currentEntry?.preference ?? null;
   const isHidden = currentEntry?.hidden ?? false;
+  const castEnabled = isGoogleCastConfigured();
 
   useEffect(() => {
     if (!trackedPayload) return;
@@ -318,15 +322,22 @@ export default function WatchPage() {
     };
   }, [trackedPayload]);
 
-  const handlePlayerProgress = (data: { currentTime: number; duration: number; progress: number }) => {
-    if (!trackedPayload) return;
-    trackWatchProgress(trackedPayload, {
-      progressSeconds: data.currentTime,
-      progressPercent: data.progress,
-      seasonNumber: season ? Number(season) : null,
-      episodeNumber: episode ? Number(episode) : null,
-    });
-  };
+  const handlePlayerProgress = useCallback(
+    (data: { currentTime: number; duration: number; progress: number }) => {
+      if (!trackedPayload) return;
+      trackWatchProgress(trackedPayload, {
+        progressSeconds: data.currentTime,
+        progressPercent: data.progress,
+        seasonNumber: season ? Number(season) : null,
+        episodeNumber: episode ? Number(episode) : null,
+      });
+    },
+    [trackedPayload, season, episode]
+  );
+
+  const handleSourceResolved = useCallback((data: { embedUrl: string; providerLabel: string }) => {
+    setCastSource({ embedUrl: data.embedUrl, providerLabel: data.providerLabel });
+  }, []);
 
   const handleFavorite = () => {
     if (!trackedPayload) return;
@@ -373,6 +384,46 @@ export default function WatchPage() {
     }
   };
 
+  const castPayload = useMemo(() => {
+    if (!castEnabled || !resolvedTmdbId || !castSource?.embedUrl) return null;
+    return {
+      embedUrl: castSource.embedUrl,
+      title,
+      subtitle: releaseDate ? `${mediaType === 'movie' ? 'Movie' : 'Series'} · ${releaseDate.slice(0, 4)}` : mediaType,
+      posterUrl: posterSrc || null,
+      mediaType,
+      tmdbId: resolvedTmdbId,
+      providerLabel: castSource.providerLabel,
+    };
+  }, [castEnabled, resolvedTmdbId, castSource, title, releaseDate, mediaType, posterSrc]);
+
+  useEffect(() => {
+    if (!castPayload) return;
+    const context = getGoogleCastContext();
+    const sessionStateEvent = window.cast?.framework?.CastContextEventType?.SESSION_STATE_CHANGED;
+    if (!context?.addEventListener || !sessionStateEvent) return;
+
+    const pushPayload = () => {
+      void sendGoogleCastPayload(castPayload);
+    };
+
+    const handleSessionState = (event: unknown) => {
+      const state =
+        typeof event === 'object' && event !== null && 'sessionState' in event
+          ? (event as { sessionState?: string }).sessionState
+          : undefined;
+      if (state === 'SESSION_STARTED' || state === 'SESSION_RESUMED') {
+        pushPayload();
+      }
+    };
+
+    pushPayload();
+    context.addEventListener(sessionStateEvent, handleSessionState);
+    return () => {
+      context.removeEventListener?.(sessionStateEvent, handleSessionState);
+    };
+  }, [castPayload]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950">
@@ -388,9 +439,11 @@ export default function WatchPage() {
 
   if (!hasDetails && !hasTvmazeDetails) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="flex min-h-screen flex-col bg-zinc-950">
         <Header />
-        <p className="text-white">Content not found</p>
+        <main className="flex flex-1 flex-col items-center justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
+          <p className="text-center text-white">Content not found</p>
+        </main>
       </div>
     );
   }
@@ -402,12 +455,15 @@ export default function WatchPage() {
       <main className="app-shell pb-[env(safe-area-inset-bottom,0px)]">
         {/* Back Button */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <Link href="/">
-            <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-zinc-800 gap-2 -ml-2 sm:ml-0 text-sm sm:text-base">
-              <ArrowLeft className="w-4 h-4 shrink-0" />
-              Back to Browse
-            </Button>
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link href="/">
+              <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-zinc-800 gap-2 -ml-2 sm:ml-0 text-sm sm:text-base">
+                <ArrowLeft className="w-4 h-4 shrink-0" />
+                Back to Browse
+              </Button>
+            </Link>
+            {castEnabled ? <GoogleCastLauncher className="rounded-md" /> : null}
+          </div>
         </div>
 
         {/* Video Player */}
@@ -430,6 +486,7 @@ export default function WatchPage() {
               nextEpisode={mediaType === 'tv'}
               episodeSelector={mediaType === 'tv'}
               onProgress={handlePlayerProgress}
+              onSourceResolved={handleSourceResolved}
             />
           ) : (
             <div className="aspect-video w-full rounded-none sm:rounded-lg bg-zinc-900 flex items-center justify-center">

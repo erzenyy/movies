@@ -54,7 +54,7 @@ export function MovieSectionClient({ title, movies, mediaType }: MovieSectionCli
 
         <div
           ref={scrollContainerRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto overscroll-x-contain scrollbar-hide pb-4 -mx-3 px-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory scroll-pl-3 sm:scroll-pl-6"
+          className="flex gap-3 sm:gap-4 overflow-x-auto overscroll-x-contain scrollbar-hide pt-5 pb-10 -mx-3 px-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory scroll-pl-3 sm:scroll-pl-6 [-webkit-overflow-scrolling:touch]"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {movies.map((movie) => (

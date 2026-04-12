@@ -23,7 +23,7 @@ export function BrowseMediaGrid({
       {items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-zinc-800 py-12 text-center text-zinc-500">{emptyMessage}</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-6 pt-4 pb-2 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-7 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {items.map((m) => (
             <MovieCard key={`${mediaType}-${m.id}`} movie={m} mediaType={mediaType} />
           ))}

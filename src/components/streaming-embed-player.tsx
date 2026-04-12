@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VideoPlayerProps } from '@/lib/types';
@@ -20,6 +20,11 @@ type PlayerProgress = {
   currentTime: number;
   duration: number;
   progress: number;
+};
+type SourceInfo = {
+  providerId: EmbedProviderId;
+  providerLabel: string;
+  embedUrl: string;
 };
 
 function UnsandboxedProviderNotice({
@@ -92,7 +97,11 @@ export function StreamingEmbedPlayer({
   episodeSelector = true,
   progress = 0,
   onProgress,
-}: StreamingEmbedPlayerProps & { onProgress?: (data: PlayerProgress) => void }) {
+  onSourceResolved,
+}: StreamingEmbedPlayerProps & {
+  onProgress?: (data: PlayerProgress) => void;
+  onSourceResolved?: (data: SourceInfo) => void;
+}) {
   const [provider, setProvider] = useState<EmbedProviderId>(() => {
     if (typeof window === 'undefined') return 'vidking';
     try {
@@ -148,6 +157,23 @@ export function StreamingEmbedPlayer({
     [provider, tmdbId, mediaType, seasonNum, episodeNum]
   );
   const requiresConsent = providerMeta.requiresConsent && !approvedProviders.includes(provider);
+
+  const lastResolvedSourceKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!onSourceResolved) {
+      lastResolvedSourceKey.current = null;
+      return;
+    }
+    const key = `${provider}|${providerMeta.label}|${providerSrc}`;
+    if (lastResolvedSourceKey.current === key) return;
+    lastResolvedSourceKey.current = key;
+    onSourceResolved({
+      providerId: provider,
+      providerLabel: providerMeta.label,
+      embedUrl: providerSrc,
+    });
+  }, [onSourceResolved, provider, providerMeta.label, providerSrc]);
 
   const approveProvider = () => {
     setApprovedProviders((current) =>
