@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Star, Calendar, Clock, Share2, Heart, Film, Loader2 } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Clock, Share2, Heart, Film, Loader2, Bookmark, ThumbsUp, EyeOff, CircleCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,8 +21,74 @@ import {
   getMovieCollectionParts,
 } from '@/lib/tmdb';
 import { getTVMazeShowDetails } from '@/lib/tvmaze';
+import { formatVoteCount } from '@/lib/utils';
+import {
+  markMediaCompleted,
+  makeStoredMediaKey,
+  setMediaPreference,
+  toggleFavoriteMedia,
+  toggleHiddenMedia,
+  toggleSavedForLater,
+  trackWatchProgress,
+  trackWatchStart,
+  useUserProfile,
+} from '@/lib/user-profile';
 
 const TVMAZE_ID_OFFSET = 900000;
+
+function extractKeywords(details: MovieDetails | TVShowDetails | null) {
+  if (!details) return [];
+  if ('aggregate_credits' in details) {
+    const tvDetails = details as TVShowDetails;
+    return (tvDetails.keywords?.results ?? []).map((keyword: { id: number; name: string }) => ({
+      id: keyword.id,
+      name: keyword.name,
+    }));
+  }
+  const movieDetails = details as MovieDetails;
+  return (movieDetails.keywords?.keywords ?? []).map((keyword: { id: number; name: string }) => ({
+    id: keyword.id,
+    name: keyword.name,
+  }));
+}
+
+function extractPeople(details: MovieDetails | TVShowDetails | null) {
+  if (!details) return [];
+  if ('aggregate_credits' in details) {
+    const tvDetails = details as TVShowDetails;
+    return [
+      ...(tvDetails.aggregate_credits?.cast ?? []).slice(0, 4).map((person: { id: number; name: string }) => ({
+        id: person.id,
+        name: person.name,
+        role: 'cast' as const,
+      })),
+      ...(tvDetails.aggregate_credits?.crew ?? [])
+        .filter((person: { job?: string }) => person.job === 'Director')
+        .slice(0, 2)
+        .map((person: { id: number; name: string }) => ({
+          id: person.id,
+          name: person.name,
+          role: 'director' as const,
+        })),
+    ];
+  }
+  const movieDetails = details as MovieDetails;
+  return [
+    ...(movieDetails.credits?.cast ?? []).slice(0, 4).map((person: { id: number; name: string }) => ({
+      id: person.id,
+      name: person.name,
+      role: 'cast' as const,
+    })),
+    ...(movieDetails.credits?.crew ?? [])
+      .filter((person: { job?: string }) => person.job === 'Director')
+      .slice(0, 2)
+      .map((person: { id: number; name: string }) => ({
+        id: person.id,
+        name: person.name,
+        role: 'director' as const,
+      })),
+  ];
+}
 
 export default function WatchPage() {
   const rawParams = useParams();
@@ -46,6 +112,7 @@ export default function WatchPage() {
   const [collectionTitle, setCollectionTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isResolvingId, setIsResolvingId] = useState(false);
+  const profile = useUserProfile();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -144,41 +211,19 @@ export default function WatchPage() {
     fetchData();
   }, [id, mediaType, isTVMazeSource, tvmazeRealId, numericId]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-zinc-950">
-        <Header />
-        <main className="pt-[calc(4rem+env(safe-area-inset-top,0px))] sm:pt-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Skeleton className="aspect-video w-full rounded-none sm:rounded-lg" />
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   // Use TMDB details if available, otherwise build from TVMaze details
   const hasDetails = details !== null;
   const hasTvmazeDetails = tvmazeDetails !== null;
 
-  if (!hasDetails && !hasTvmazeDetails) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <Header />
-        <p className="text-white">Content not found</p>
-      </div>
-    );
-  }
-
   // Extract display info from whichever source we have
   const title = hasDetails
     ? ('title' in details! ? details!.title : details!.name)
-    : tvmazeDetails!.name;
-  const overview = hasDetails ? details!.overview : tvmazeDetails!.overview;
-  const rating = hasDetails ? (details!.vote_average ?? 0) : (tvmazeDetails!.vote_average ?? 0);
+    : tvmazeDetails?.name ?? '';
+  const overview = hasDetails ? details!.overview : tvmazeDetails?.overview ?? '';
+  const rating = hasDetails ? (details!.vote_average ?? 0) : (tvmazeDetails?.vote_average ?? 0);
   const releaseDate = hasDetails
     ? ('release_date' in details! ? details!.release_date : details!.first_air_date)
-    : tvmazeDetails!.first_air_date;
+    : tvmazeDetails?.first_air_date ?? '';
   const runtime = hasDetails && 'runtime' in details!
     ? details!.runtime
     : (hasDetails && 'episode_run_time' in details! ? (details!.episode_run_time?.[0] || 0) : 0);
@@ -192,12 +237,169 @@ export default function WatchPage() {
     : tvmazeDetails?._tvmazeImage || '';
 
   const playerTmdbId = resolvedTmdbId || id;
+  const trackedPayload = useMemo(() => {
+    if (!resolvedTmdbId) return null;
+    const extractedKeywords = hasDetails ? extractKeywords(details) : [];
+    const extractedPeople = hasDetails ? extractPeople(details) : [];
+    return {
+      tmdbId: resolvedTmdbId,
+      mediaType,
+      title,
+      overview,
+      posterPath: hasDetails ? details!.poster_path : tvmazeDetails?._tvmazeImage ?? null,
+      backdropPath: hasDetails ? details!.backdrop_path : null,
+      releaseDate,
+      voteAverage: rating,
+      voteCount: hasDetails ? details!.vote_count : tvmazeDetails?.vote_count ?? 0,
+      genres: hasDetails ? details!.genres.map((genre) => ({ id: genre.id, name: genre.name })) : [],
+      keywords: extractedKeywords,
+      people: extractedPeople,
+      originalLanguage: hasDetails ? details!.original_language ?? null : null,
+      runtimeMinutes: runtime || null,
+    };
+  }, [
+    resolvedTmdbId,
+    mediaType,
+    title,
+    overview,
+    hasDetails,
+    details,
+    tvmazeDetails,
+    releaseDate,
+    rating,
+    runtime,
+  ]);
+  const currentEntry = trackedPayload
+    ? profile.items.find((item) => item.key === makeStoredMediaKey(trackedPayload.tmdbId, trackedPayload.mediaType))
+    : null;
+  const isFavorite = currentEntry?.favorite ?? false;
+  const isSavedForLater = currentEntry?.savedForLater ?? false;
+  const preference = currentEntry?.preference ?? null;
+  const isHidden = currentEntry?.hidden ?? false;
+
+  useEffect(() => {
+    if (!trackedPayload) return;
+    trackWatchStart(trackedPayload);
+  }, [trackedPayload]);
+
+  useEffect(() => {
+    if (!trackedPayload) return;
+
+    let lastTick = Date.now();
+    const commitElapsed = () => {
+      const now = Date.now();
+      const elapsed = Math.min(30, Math.max(0, Math.round((now - lastTick) / 1000)));
+      lastTick = now;
+      if (elapsed > 0) {
+        trackWatchProgress(trackedPayload, { watchedSeconds: elapsed });
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        commitElapsed();
+      } else {
+        lastTick = Date.now();
+      }
+    }, 15000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        lastTick = Date.now();
+        return;
+      }
+      commitElapsed();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      commitElapsed();
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [trackedPayload]);
+
+  const handlePlayerProgress = (data: { currentTime: number; duration: number; progress: number }) => {
+    if (!trackedPayload) return;
+    trackWatchProgress(trackedPayload, {
+      progressSeconds: data.currentTime,
+      progressPercent: data.progress,
+      seasonNumber: season ? Number(season) : null,
+      episodeNumber: episode ? Number(episode) : null,
+    });
+  };
+
+  const handleFavorite = () => {
+    if (!trackedPayload) return;
+    toggleFavoriteMedia(trackedPayload);
+  };
+
+  const handleSaveForLater = () => {
+    if (!trackedPayload) return;
+    toggleSavedForLater(trackedPayload);
+  };
+
+  const handleLike = () => {
+    if (!trackedPayload) return;
+    setMediaPreference(trackedPayload, 'like');
+  };
+
+  const handleHide = () => {
+    if (!trackedPayload) return;
+    toggleHiddenMedia(trackedPayload);
+  };
+
+  const handleMarkCompleted = () => {
+    if (!trackedPayload) return;
+    markMediaCompleted(trackedPayload);
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const shareData = { title, text: overview || title, url };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      // fall through to clipboard
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // ignore clipboard failures
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950">
+        <Header />
+        <main className="app-shell">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Skeleton className="aspect-video w-full rounded-none sm:rounded-lg" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!hasDetails && !hasTvmazeDetails) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <Header />
+        <p className="text-white">Content not found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950">
       <Header />
       
-      <main className="pt-[calc(4rem+env(safe-area-inset-top,0px))] sm:pt-16 lg:pt-20 pb-[env(safe-area-inset-bottom,0px)]">
+      <main className="app-shell pb-[env(safe-area-inset-bottom,0px)]">
         {/* Back Button */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <Link href="/">
@@ -227,6 +429,7 @@ export default function WatchPage() {
               autoPlay={true}
               nextEpisode={mediaType === 'tv'}
               episodeSelector={mediaType === 'tv'}
+              onProgress={handlePlayerProgress}
             />
           ) : (
             <div className="aspect-video w-full rounded-none sm:rounded-lg bg-zinc-900 flex items-center justify-center">
@@ -263,13 +466,61 @@ export default function WatchPage() {
                 )}
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                <Button variant="outline" className="flex-1 border-zinc-700 text-white hover:bg-zinc-800 min-h-11">
-                  <Heart className="w-4 h-4 mr-2 shrink-0" />
-                  Favorite
+              <div className="mt-4 grid grid-cols-5 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleFavorite}
+                  aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  title={isFavorite ? 'Favorited' : 'Favorite'}
+                  className={`min-h-11 border-zinc-700 text-white hover:bg-zinc-800 ${isFavorite ? 'bg-zinc-800 text-red-400' : ''}`}
+                >
+                  <Heart className={`w-4 h-4 shrink-0 ${isFavorite ? 'fill-red-400 text-red-400' : ''}`} />
                 </Button>
-                <Button variant="outline" className="flex-1 border-zinc-700 text-white hover:bg-zinc-800 min-h-11">
-                  <Share2 className="w-4 h-4 mr-2 shrink-0" />
+                <Button
+                  variant="outline"
+                  onClick={handleSaveForLater}
+                  aria-label={isSavedForLater ? 'Remove from saved for later' : 'Save for later'}
+                  title={isSavedForLater ? 'Saved for later' : 'Save for later'}
+                  className={`min-h-11 border-zinc-700 text-white hover:bg-zinc-800 ${isSavedForLater ? 'bg-zinc-800 text-white' : ''}`}
+                >
+                  <Bookmark className={`w-4 h-4 shrink-0 ${isSavedForLater ? 'fill-white text-white' : ''}`} />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleLike}
+                  aria-label={preference === 'like' ? 'Unlike this title' : 'Like this title'}
+                  title={preference === 'like' ? 'Liked' : 'Like'}
+                  className={`min-h-11 border-zinc-700 text-white hover:bg-zinc-800 ${preference === 'like' ? 'bg-zinc-800 text-emerald-400' : ''}`}
+                >
+                  <ThumbsUp className={`w-4 h-4 shrink-0 ${preference === 'like' ? 'fill-emerald-400 text-emerald-400' : ''}`} />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleHide}
+                  aria-label={isHidden ? 'Show this title again' : 'Hide this title'}
+                  title={isHidden ? 'Hidden from recommendations' : 'Not interested'}
+                  className={`min-h-11 border-zinc-700 text-white hover:bg-zinc-800 ${isHidden ? 'bg-zinc-800 text-zinc-300' : ''}`}
+                >
+                  <EyeOff className="w-4 h-4 shrink-0" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleMarkCompleted}
+                  aria-label="Mark as watched"
+                  title="Mark as watched"
+                  className={`min-h-11 border-zinc-700 text-white hover:bg-zinc-800 ${currentEntry?.completedAt ? 'bg-zinc-800 text-yellow-300' : ''}`}
+                >
+                  <CircleCheck className={`w-4 h-4 shrink-0 ${currentEntry?.completedAt ? 'fill-yellow-300 text-yellow-300' : ''}`} />
+                </Button>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
+                <span>{isHidden ? 'Hidden from recommendations' : 'Stored locally on this device'}</span>
+                <Button
+                  variant="ghost"
+                  onClick={handleShare}
+                  className="h-auto px-0 py-0 text-[11px] text-zinc-500 hover:bg-transparent hover:text-white"
+                >
+                  <Share2 className="mr-1 h-3.5 w-3.5" />
                   Share
                 </Button>
               </div>
@@ -284,7 +535,10 @@ export default function WatchPage() {
                     <>
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span className="text-white font-semibold">{rating.toFixed(1)}</span>
+                        <span className="text-white font-semibold">
+                          TMDB {rating.toFixed(1)}
+                          {hasDetails && details!.vote_count > 0 ? ` (${formatVoteCount(details!.vote_count)} votes)` : ''}
+                        </span>
                       </div>
                       <span className="text-zinc-600">•</span>
                     </>
@@ -372,6 +626,14 @@ export default function WatchPage() {
                   <div>
                     <p className="text-sm text-zinc-500">Match Source</p>
                     <p className="text-white">{resolvedStrategy}</p>
+                  </div>
+                )}
+                {currentEntry && (
+                  <div>
+                    <p className="text-sm text-zinc-500">Saved Progress</p>
+                    <p className="text-white">
+                      {currentEntry.progressPercent ? `${Math.round(currentEntry.progressPercent)}%` : `${Math.round(currentEntry.totalWatchSeconds / 60)}m tracked`}
+                    </p>
                   </div>
                 )}
               </div>

@@ -16,6 +16,11 @@ import {
 } from '@/lib/embed-providers';
 
 type StreamingEmbedPlayerProps = VideoPlayerProps;
+type PlayerProgress = {
+  currentTime: number;
+  duration: number;
+  progress: number;
+};
 
 function UnsandboxedProviderNotice({
   providerLabel,
@@ -86,7 +91,8 @@ export function StreamingEmbedPlayer({
   nextEpisode = true,
   episodeSelector = true,
   progress = 0,
-}: StreamingEmbedPlayerProps) {
+  onProgress,
+}: StreamingEmbedPlayerProps & { onProgress?: (data: PlayerProgress) => void }) {
   const [provider, setProvider] = useState<EmbedProviderId>(() => {
     if (typeof window === 'undefined') return 'vidking';
     try {
@@ -214,6 +220,7 @@ export function StreamingEmbedPlayer({
           nextEpisode={nextEpisode}
           episodeSelector={episodeSelector}
           progress={progress}
+          onProgress={onProgress}
         />
       ) : requiresConsent ? (
         <UnsandboxedProviderNotice

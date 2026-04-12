@@ -122,11 +122,11 @@ export const getTrendingTVShows = async (timeWindow: 'day' | 'week' = 'week'): P
 };
 
 export const getMovieDetails = async (id: number): Promise<MovieDetails> => {
-  return fetchFromTMDB(`/movie/${id}`);
+  return fetchFromTMDB(`/movie/${id}`, '&append_to_response=credits,keywords');
 };
 
 export const getTVShowDetails = async (id: number): Promise<TVShowDetails> => {
-  return fetchFromTMDB(`/tv/${id}`);
+  return fetchFromTMDB(`/tv/${id}`, '&append_to_response=aggregate_credits,keywords');
 };
 
 export type PagedList<T> = {
@@ -215,6 +215,8 @@ export const discoverMovies = async (opts: {
   minVotes?: number;
   runtimeGte?: number;
   runtimeLte?: number;
+  keywordId?: number;
+  personId?: number;
 }): Promise<PagedList<Movie>> => {
   if (!isApiKeyConfigured()) {
     return { results: [], page: 1, totalPages: 0, totalResults: 0 };
@@ -231,6 +233,8 @@ export const discoverMovies = async (opts: {
   else extra += '&vote_count.gte=40';
   if (opts.runtimeGte !== undefined) extra += `&with_runtime.gte=${opts.runtimeGte}`;
   if (opts.runtimeLte !== undefined) extra += `&with_runtime.lte=${opts.runtimeLte}`;
+  if (opts.keywordId !== undefined) extra += `&with_keywords=${opts.keywordId}`;
+  if (opts.personId !== undefined) extra += `&with_people=${opts.personId}`;
   const data = await fetchFromTMDB('/discover/movie', extra);
   return {
     results: annotateTmdbResults(data.results || []),
@@ -251,6 +255,8 @@ export const discoverTVShows = async (opts: {
   minVotes?: number;
   runtimeGte?: number;
   runtimeLte?: number;
+  keywordId?: number;
+  personId?: number;
 }): Promise<PagedList<TVShow>> => {
   if (!isApiKeyConfigured()) {
     return { results: [], page: 1, totalPages: 0, totalResults: 0 };
@@ -267,6 +273,8 @@ export const discoverTVShows = async (opts: {
   else extra += '&vote_count.gte=25';
   if (opts.runtimeGte !== undefined) extra += `&with_runtime.gte=${opts.runtimeGte}`;
   if (opts.runtimeLte !== undefined) extra += `&with_runtime.lte=${opts.runtimeLte}`;
+  if (opts.keywordId !== undefined) extra += `&with_keywords=${opts.keywordId}`;
+  if (opts.personId !== undefined) extra += `&with_people=${opts.personId}`;
   const data = await fetchFromTMDB('/discover/tv', extra);
   return {
     results: annotateTmdbResults(data.results || []),

@@ -51,8 +51,8 @@ export default async function TrendingPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <Header />
-
-      <main className="pt-[calc(5rem+env(safe-area-inset-top,0px))] sm:pt-24">
+      
+      <main className="app-shell">
         <div className="mx-auto mb-8 max-w-7xl px-4 sm:mb-12 sm:px-6 lg:px-8">
           <h1 className="mb-3 text-3xl font-bold text-white sm:mb-4 sm:text-4xl">Trending</h1>
           <p className="max-w-2xl text-base text-zinc-400 sm:text-lg">

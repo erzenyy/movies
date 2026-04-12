@@ -12,6 +12,7 @@ export interface Movie {
   vote_count: number;
   genre_ids: number[];
   media_type?: MediaType;
+  original_language?: string;
   _source?: MediaSource;
   _tmdbId?: number | null;
   _imdbId?: string | null;
@@ -31,6 +32,8 @@ export interface TVShow {
   vote_count: number;
   genre_ids: number[];
   media_type?: MediaType;
+  original_language?: string;
+  origin_country?: string[];
   _source?: MediaSource;
   _tmdbId?: number | null;
   _imdbId?: string | null;
@@ -42,6 +45,19 @@ export interface TVShow {
 export interface Genre {
   id: number;
   name: string;
+}
+
+export interface Keyword {
+  id: number;
+  name: string;
+}
+
+export interface CreditPerson {
+  id: number;
+  name: string;
+  character?: string;
+  job?: string;
+  department?: string;
 }
 
 /** TMDB `belongs_to_collection` on movie details (e.g. Harry Potter series). */
@@ -62,6 +78,13 @@ export interface MovieDetails extends Movie {
   homepage: string | null;
   imdb_id: string | null;
   belongs_to_collection?: BelongsToCollection | null;
+  credits?: {
+    cast?: CreditPerson[];
+    crew?: CreditPerson[];
+  };
+  keywords?: {
+    keywords?: Keyword[];
+  };
 }
 
 export interface TVShowDetails extends TVShow {
@@ -72,6 +95,13 @@ export interface TVShowDetails extends TVShow {
   status: string;
   tagline: string;
   homepage: string | null;
+  aggregate_credits?: {
+    cast?: CreditPerson[];
+    crew?: CreditPerson[];
+  };
+  keywords?: {
+    results?: Keyword[];
+  };
 }
 
 export interface VideoPlayerProps {

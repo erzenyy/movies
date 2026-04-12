@@ -8,22 +8,25 @@ import { Badge } from '@/components/ui/badge';
 import { Movie, TVShow } from '@/lib/types';
 import { getCanonicalTmdbId } from '@/lib/media';
 import { getImageUrl } from '@/lib/tmdb';
+import { formatVoteCount } from '@/lib/utils';
 
 interface MovieCardProps {
   movie: Movie | TVShow;
   mediaType?: 'movie' | 'tv';
 }
 
-export function MovieCard({ movie, mediaType = 'movie' }: MovieCardProps) {
+export function MovieCard({ movie, mediaType }: MovieCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   
   const title = 'title' in movie ? movie.title : movie.name;
   const date = 'release_date' in movie ? movie.release_date : movie.first_air_date;
+  const resolvedMediaType = mediaType ?? movie.media_type ?? ('title' in movie ? 'movie' : 'tv');
   const watchId = getCanonicalTmdbId(movie) ?? movie.id;
-  const href = mediaType === 'tv' 
+  const href = resolvedMediaType === 'tv' 
     ? `/watch/tv/${watchId}/1/1` 
     : `/watch/movie/${watchId}`;
   const rating = movie.vote_average ?? 0;
+  const votes = movie.vote_count ?? 0;
 
   return (
     <Link href={href}>
@@ -70,6 +73,7 @@ export function MovieCard({ movie, mediaType = 'movie' }: MovieCardProps) {
               <Badge variant="secondary" className="bg-zinc-950/80 text-yellow-400 border-0 backdrop-blur-sm text-[11px] px-1.5 py-0.5">
                 <Star className="w-3 h-3 mr-0.5 fill-yellow-400" />
                 {rating.toFixed(1)}
+                {votes > 0 ? ` (${formatVoteCount(votes, true)})` : ''}
               </Badge>
             </div>
           )}

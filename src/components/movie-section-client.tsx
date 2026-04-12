@@ -12,7 +12,7 @@ interface MovieSectionClientProps {
   mediaType?: 'movie' | 'tv';
 }
 
-export function MovieSectionClient({ title, movies, mediaType = 'movie' }: MovieSectionClientProps) {
+export function MovieSectionClient({ title, movies, mediaType }: MovieSectionClientProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -58,7 +58,10 @@ export function MovieSectionClient({ title, movies, mediaType = 'movie' }: Movie
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {movies.map((movie) => (
-            <div key={movie.id} className="flex-shrink-0 w-[9.25rem] sm:w-48 lg:w-52 snap-start">
+            <div
+              key={`${movie.media_type ?? mediaType ?? ('title' in movie ? 'movie' : 'tv')}-${movie.id}`}
+              className="flex-shrink-0 w-[9.25rem] sm:w-48 lg:w-52 snap-start"
+            >
               <MovieCard movie={movie} mediaType={mediaType} />
             </div>
           ))}

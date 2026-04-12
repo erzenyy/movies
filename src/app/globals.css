@@ -49,6 +49,7 @@
 }
 
 :root {
+  --app-header-height: 72px;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -126,5 +127,11 @@
   }
   html {
     @apply font-sans overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .app-shell {
+    padding-top: 1rem;
   }
 }
