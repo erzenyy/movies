@@ -1,6 +1,7 @@
 using Jellyfin.Plugin.MovieFlix.Configuration;
 using Jellyfin.Plugin.MovieFlix.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MovieFlix.Api;
