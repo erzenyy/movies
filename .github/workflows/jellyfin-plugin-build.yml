@@ -1,0 +1,44 @@
+name: Build Jellyfin Plugin
+
+on:
+  push:
+    paths:
+      - "jellyfin-plugin-movieflix/**"
+      - ".github/workflows/jellyfin-plugin-build.yml"
+  pull_request:
+    paths:
+      - "jellyfin-plugin-movieflix/**"
+      - ".github/workflows/jellyfin-plugin-build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj
+
+      - name: Build
+        run: dotnet build jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj --configuration Release --output jellyfin-plugin-movieflix/artifacts/publish --no-build
+
+      - name: Zip plugin
+        run: |
+          cd jellyfin-plugin-movieflix/artifacts/publish
+          zip -r ../movieflix-jellyfin_ci.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: movieflix-jellyfin
+          path: jellyfin-plugin-movieflix/artifacts/movieflix-jellyfin_ci.zip

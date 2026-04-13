@@ -1,0 +1,21 @@
+[
+  {
+    "guid": "a30f21ae-4200-46ad-9647-e2f895e86963",
+    "name": "MovieFlix",
+    "description": "Search TMDB and play through MovieFlix-compatible providers inside Jellyfin.\n",
+    "overview": "MovieFlix search and playback companion for Jellyfin",
+    "owner": "erzenyy",
+    "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/erzenyy/movies/main/public/vercel.svg",
+    "versions": [
+      {
+        "version": "__VERSION__",
+        "changelog": "__CHANGELOG__",
+        "targetAbi": "__TARGET_ABI__",
+        "sourceUrl": "__SOURCE_URL__",
+        "checksum": "__CHECKSUM__",
+        "timestamp": "__TIMESTAMP__"
+      }
+    ]
+  }
+]

@@ -1,0 +1,88 @@
+name: Release Jellyfin Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Plugin version (example 0.1.0.0)"
+        required: true
+      target_abi:
+        description: "Jellyfin target ABI (example 10.11.0.0)"
+        required: true
+  push:
+    tags:
+      - "jellyfin-plugin-v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set version defaults
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "target_abi=${{ github.event.inputs.target_abi }}" >> "$GITHUB_OUTPUT"
+            echo "tag=jellyfin-plugin-v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            RAW_TAG="${GITHUB_REF_NAME}"
+            VERSION="${RAW_TAG#jellyfin-plugin-v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "target_abi=10.11.0.0" >> "$GITHUB_OUTPUT"
+            echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj
+
+      - name: Build and publish
+        run: |
+          dotnet publish jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj \
+            --configuration Release \
+            --output jellyfin-plugin-movieflix/artifacts/publish \
+            --no-restore
+
+      - name: Create plugin ZIP
+        run: |
+          cd jellyfin-plugin-movieflix/artifacts/publish
+          zip -r ../movieflix-jellyfin_${{ steps.vars.outputs.version }}.zip .
+
+      - name: Calculate checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(md5sum jellyfin-plugin-movieflix/artifacts/movieflix-jellyfin_${{ steps.vars.outputs.version }}.zip | awk '{print $1}')
+          echo "value=$CHECKSUM" >> "$GITHUB_OUTPUT"
+
+      - name: Generate manifest
+        run: |
+          SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/movieflix-jellyfin_${{ steps.vars.outputs.version }}.zip"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          CHANGELOG="Initial MovieFlix Jellyfin plugin release"
+          sed \
+            -e "s|__VERSION__|${{ steps.vars.outputs.version }}|g" \
+            -e "s|__TARGET_ABI__|${{ steps.vars.outputs.target_abi }}|g" \
+            -e "s|__SOURCE_URL__|${SOURCE_URL}|g" \
+            -e "s|__CHECKSUM__|${{ steps.checksum.outputs.value }}|g" \
+            -e "s|__TIMESTAMP__|${TIMESTAMP}|g" \
+            -e "s|__CHANGELOG__|${CHANGELOG}|g" \
+            jellyfin-plugin-movieflix/repository/manifest.template.json \
+            > jellyfin-plugin-movieflix/repository/manifest.json
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          files: |
+            jellyfin-plugin-movieflix/artifacts/movieflix-jellyfin_${{ steps.vars.outputs.version }}.zip
+            jellyfin-plugin-movieflix/repository/manifest.json

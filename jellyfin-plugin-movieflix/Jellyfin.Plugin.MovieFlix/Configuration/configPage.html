@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>MovieFlix</title>
+</head>
+<body>
+    <div id="MovieFlixConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="MovieFlixConfigForm">
+                    <div class="verticalSection verticalSection-extrabottompadding">
+                        <div class="sectionTitleContainer">
+                            <h2 class="sectionTitle">MovieFlix</h2>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="TmdbApiKey">TMDB API Key</label>
+                            <input id="TmdbApiKey" name="TmdbApiKey" type="text" is="emby-input" />
+                            <div class="fieldDescription">Required for search inside Jellyfin.</div>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="PublicBaseUrl">Public MovieFlix Base URL</label>
+                            <input id="PublicBaseUrl" name="PublicBaseUrl" type="text" is="emby-input" />
+                            <div class="fieldDescription">Optional. Example: https://movieflix.example.com</div>
+                        </div>
+
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="DefaultProvider">Default Provider</label>
+                            <select is="emby-select" id="DefaultProvider" name="DefaultProvider">
+                                <option value="vidking">Vidking</option>
+                                <option value="vidsrc">VidSrc</option>
+                                <option value="multiembed">MultiEmbed</option>
+                                <option value="moviesapi">MoviesAPI</option>
+                            </select>
+                        </div>
+
+                        <label class="checkboxContainer checkboxContainer-withDescription">
+                            <input id="EnableCommunityProviders" name="EnableCommunityProviders" type="checkbox" is="emby-checkbox" />
+                            <span>Enable community providers</span>
+                            <div class="fieldDescription">If disabled, the plugin falls back to Vidking only.</div>
+                        </label>
+
+                        <label class="checkboxContainer checkboxContainer-withDescription">
+                            <input id="IncludeTvInSearch" name="IncludeTvInSearch" type="checkbox" is="emby-checkbox" />
+                            <span>Include TV results in search</span>
+                        </label>
+
+                        <div class="fieldDescription" style="margin: 18px 0 8px;">
+                            Web integration:
+                            use the plugin page directly at <code>/MovieFlix/Web/App</code>,
+                            or inject <code>/MovieFlix/Web/Integration.js</code> with a JavaScript injection plugin to add MovieFlix into the Jellyfin web sidebar.
+                        </div>
+
+                        <div>
+                            <button is="emby-button" type="submit" class="raised button-submit block">
+                                <span>Save</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            (function () {
+                const pluginId = 'a30f21ae-4200-46ad-9647-e2f895e86963';
+                const form = document.querySelector('#MovieFlixConfigForm');
+
+                function loadConfig(page) {
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        page.querySelector('#TmdbApiKey').value = config.TmdbApiKey || '';
+                        page.querySelector('#PublicBaseUrl').value = config.PublicBaseUrl || '';
+                        page.querySelector('#DefaultProvider').value = config.DefaultProvider || 'vidking';
+                        page.querySelector('#EnableCommunityProviders').checked = !!config.EnableCommunityProviders;
+                        page.querySelector('#IncludeTvInSearch').checked = config.IncludeTvInSearch !== false;
+                    });
+                }
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.TmdbApiKey = document.querySelector('#TmdbApiKey').value;
+                        config.PublicBaseUrl = document.querySelector('#PublicBaseUrl').value;
+                        config.DefaultProvider = document.querySelector('#DefaultProvider').value;
+                        config.EnableCommunityProviders = document.querySelector('#EnableCommunityProviders').checked;
+                        config.IncludeTvInSearch = document.querySelector('#IncludeTvInSearch').checked;
+
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function () {
+                            Dashboard.processPluginConfigurationUpdateResult();
+                        });
+                    });
+                });
+
+                document.querySelector('#MovieFlixConfigPage').addEventListener('pageshow', function () {
+                    loadConfig(this);
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
