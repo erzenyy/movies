@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: jellyfin-plugin-release
+      cancel-in-progress: false
 
     steps:
       - name: Check out repository
@@ -116,6 +119,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout main
           git add jellyfin-plugin-movieflix/repository/manifest.json
           git diff --cached --quiet || git commit -m "chore: update jellyfin manifest for ${{ steps.vars.outputs.version }}"
           git push origin HEAD:main
@@ -124,6 +128,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
+          fail_on_unmatched_files: true
           files: |
             jellyfin-plugin-movieflix/artifacts/movieflix-jellyfin_${{ steps.vars.outputs.version }}.zip
             jellyfin-plugin-movieflix/repository/manifest.json
