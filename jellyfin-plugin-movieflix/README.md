@@ -54,7 +54,7 @@ Set these in the Jellyfin dashboard page:
 
 ## Build Notes
 
-The official Jellyfin template currently targets modern `.NET` and Jellyfin package versions. This plugin follows that structure, but I could not run `dotnet build` locally in this workspace because `dotnet` is not installed on this machine.
+The official Jellyfin template currently targets modern `.NET` and Jellyfin package versions. This plugin now targets `.NET 9`, which matches the Jellyfin `10.11.3` package requirements used in the project. I still could not run `dotnet build` locally in this workspace because `dotnet` is not installed on this machine.
 
 ## Easy Install Path
 
