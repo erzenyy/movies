@@ -27,10 +27,25 @@ jobs:
         run: dotnet restore jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj
 
       - name: Build
-        run: dotnet build jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj --configuration Release --no-restore
+        run: |
+          dotnet build jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj \
+            --configuration Release \
+            --no-restore \
+            /p:Version=0.2.0.0 \
+            /p:AssemblyVersion=0.2.0.0 \
+            /p:FileVersion=0.2.0.0 \
+            /p:InformationalVersion=0.2.0.0
 
       - name: Publish
-        run: dotnet publish jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj --configuration Release --output jellyfin-plugin-movieflix/artifacts/publish --no-build
+        run: |
+          dotnet publish jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj \
+            --configuration Release \
+            --output jellyfin-plugin-movieflix/artifacts/publish \
+            --no-build \
+            /p:Version=0.2.0.0 \
+            /p:AssemblyVersion=0.2.0.0 \
+            /p:FileVersion=0.2.0.0 \
+            /p:InformationalVersion=0.2.0.0
 
       - name: Zip plugin
         run: |

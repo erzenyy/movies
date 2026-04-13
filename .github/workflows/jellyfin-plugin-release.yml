@@ -51,7 +51,11 @@ jobs:
           dotnet publish jellyfin-plugin-movieflix/Jellyfin.Plugin.MovieFlix/Jellyfin.Plugin.MovieFlix.csproj \
             --configuration Release \
             --output jellyfin-plugin-movieflix/artifacts/publish \
-            --no-restore
+            --no-restore \
+            /p:Version=${{ steps.vars.outputs.version }} \
+            /p:AssemblyVersion=${{ steps.vars.outputs.version }} \
+            /p:FileVersion=${{ steps.vars.outputs.version }} \
+            /p:InformationalVersion=${{ steps.vars.outputs.version }}
 
       - name: Create plugin ZIP
         run: |

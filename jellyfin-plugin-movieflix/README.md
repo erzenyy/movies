@@ -62,14 +62,14 @@ If you want the simplest install flow through Jellyfin's repository system:
 
 1. Push this repo to GitHub
 2. Run the GitHub Action `Release Jellyfin Plugin`
-3. Use a version like `0.1.0.0`
+3. Use a version like `0.2.0.0`
 4. After the workflow finishes, it produces:
    - a release ZIP
    - `jellyfin-plugin-movieflix/repository/manifest.json`
-5. In Jellyfin, add this repository URL:
+5. In Jellyfin, add the release manifest URL for that exact version:
 
 ```text
-https://raw.githubusercontent.com/erzenyy/movies/main/jellyfin-plugin-movieflix/repository/manifest.json
+https://github.com/erzenyy/movies/releases/download/jellyfin-plugin-v0.2.0.0/manifest.json
 ```
 
 Then install `MovieFlix` from the Jellyfin plugins catalog.
