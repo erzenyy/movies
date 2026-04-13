@@ -7,6 +7,15 @@
     "owner": "erzenyy",
     "category": "General",
     "imageUrl": "https://raw.githubusercontent.com/erzenyy/movies/main/public/vercel.svg",
-    "versions": []
+    "versions": [
+      {
+        "version": "0.3.0.0",
+        "changelog": "MovieFlix Jellyfin plugin release 0.3.0.0",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/erzenyy/movies/releases/download/jellyfin-plugin-v0.3.0.0/movieflix-jellyfin_0.3.0.0.zip",
+        "checksum": "14cd933cba00f5303b1eaf61bec36601",
+        "timestamp": "2026-04-13T15:31:46Z"
+      }
+    ]
   }
 ]
