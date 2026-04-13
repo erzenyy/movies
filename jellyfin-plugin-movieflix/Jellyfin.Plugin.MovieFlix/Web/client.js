@@ -1,22 +1,23 @@
 (function () {
-    const storageKey = 'movieflix-jellyfin-provider';
-    const queryInput = document.getElementById('query');
-    const mediaTypeSelect = document.getElementById('mediaType');
-    const providerSelect = document.getElementById('provider');
-    const searchBtn = document.getElementById('searchBtn');
-    const results = document.getElementById('results');
-    const viewerTitle = document.getElementById('viewerTitle');
-    const viewerSubtitle = document.getElementById('viewerSubtitle');
-    const viewerFrameWrap = document.getElementById('viewerFrameWrap');
-    const playInline = document.getElementById('playInline');
-    const openMovieFlix = document.getElementById('openMovieFlix');
+    var storageKey = 'movieflix-jellyfin-provider';
+    var queryInput = document.getElementById('query');
+    var mediaTypeSelect = document.getElementById('mediaType');
+    var providerSelect = document.getElementById('provider');
+    var searchBtn = document.getElementById('searchBtn');
+    var results = document.getElementById('results');
+    var viewerTitle = document.getElementById('viewerTitle');
+    var viewerSubtitle = document.getElementById('viewerSubtitle');
+    var viewerFrameWrap = document.getElementById('viewerFrameWrap');
+    var playInline = document.getElementById('playInline');
+    var openMovieFlix = document.getElementById('openMovieFlix');
 
-    let selected = null;
-    let playback = null;
-    let activeCard = null;
+    var selected = null;
+    var playback = null;
+    var activeCard = null;
+    var searching = false;
 
     function readState() {
-        const params = new URLSearchParams(window.location.search);
+        var params = new URLSearchParams(window.location.search);
         return {
             query: params.get('query') || '',
             mediaType: params.get('mediaType') || '',
@@ -25,7 +26,7 @@
     }
 
     function writeState() {
-        const params = new URLSearchParams(window.location.search);
+        var params = new URLSearchParams(window.location.search);
         if (queryInput.value.trim()) {
             params.set('query', queryInput.value.trim());
         } else {
@@ -44,67 +45,101 @@
             params.delete('provider');
         }
 
-        const nextUrl = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+        var nextUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
         window.history.replaceState({}, '', nextUrl);
-        localStorage.setItem(storageKey, providerSelect.value);
+        try { localStorage.setItem(storageKey, providerSelect.value); } catch (e) {}
     }
 
-    async function search() {
-        const query = queryInput.value.trim();
-        if (!query) return;
+    function search() {
+        var query = queryInput.value.trim();
+        if (!query || searching) return;
         writeState();
+        searching = true;
+        searchBtn.disabled = true;
+        searchBtn.textContent = 'Searching…';
 
-        results.innerHTML = '<div class="empty" style="grid-column:1/-1">Searching…</div>';
-        const mediaType = mediaTypeSelect.value;
-        const url = '/MovieFlix/Search?query=' + encodeURIComponent(query) + (mediaType ? '&mediaType=' + encodeURIComponent(mediaType) : '');
-        const res = await fetch(url);
-        const data = await res.json();
+        results.innerHTML = '<div class="empty">Searching…</div>';
+        var mediaType = mediaTypeSelect.value;
+        var url = '/MovieFlix/Search?query=' + encodeURIComponent(query) + (mediaType ? '&mediaType=' + encodeURIComponent(mediaType) : '');
 
-        if (!Array.isArray(data.items) || data.items.length === 0) {
-            results.innerHTML = '<div class="empty" style="grid-column:1/-1">No titles found.</div>';
-            return;
-        }
+        fetch(url).then(function (res) {
+            if (!res.ok) return res.text().then(function (t) { throw new Error(t || 'HTTP ' + res.status); });
+            return res.json();
+        }).then(function (data) {
+            if (!Array.isArray(data.items) || data.items.length === 0) {
+                results.innerHTML = '<div class="empty">No titles found.</div>';
+                return;
+            }
 
-        results.innerHTML = '';
-        data.items.forEach((item) => {
-            const card = document.createElement('button');
-            card.className = 'result';
-            card.type = 'button';
-            card.innerHTML = `
-                ${item.posterUrl ? `<img class="thumb" src="${item.posterUrl}" alt="">` : `<div class="thumb"></div>`}
-                <div>
-                    <div class="title">${item.title}</div>
-                    <div class="line">${item.mediaType.toUpperCase()} · ${item.releaseDate ? String(item.releaseDate).slice(0, 4) : '—'}</div>
-                    <div class="line">${item.voteAverage ? item.voteAverage.toFixed(1) + ' · ' + item.voteCount + ' votes' : ''}</div>
-                </div>
-            `;
-            card.addEventListener('click', () => selectItem(item, card));
-            results.appendChild(card);
+            results.innerHTML = '';
+            data.items.forEach(function (item) {
+                var card = document.createElement('button');
+                card.className = 'result';
+                card.type = 'button';
+                var posterHtml = item.posterUrl
+                    ? '<img class="thumb" src="' + item.posterUrl + '" alt="" loading="lazy">'
+                    : '<div class="thumb"></div>';
+                card.innerHTML =
+                    posterHtml +
+                    '<div>' +
+                        '<div class="title">' + escHtml(item.title) + '</div>' +
+                        '<div class="line">' + (item.mediaType || 'movie').toUpperCase() + ' \u00b7 ' + (item.releaseDate ? String(item.releaseDate).slice(0, 4) : '\u2014') + '</div>' +
+                        '<div class="line">' + (item.voteAverage ? item.voteAverage.toFixed(1) + ' \u00b7 ' + item.voteCount + ' votes' : '') + '</div>' +
+                    '</div>';
+                card.addEventListener('click', function () { selectItem(item, card); });
+                results.appendChild(card);
+            });
+
+            if (data.items.length > 0) {
+                selectItem(data.items[0], results.querySelector('.result'));
+            }
+        }).catch(function (err) {
+            var msg = (err && err.message) ? err.message : 'Search failed.';
+            results.innerHTML = '<div class="empty">' + escHtml(msg) + '</div>';
+        }).finally(function () {
+            searching = false;
+            searchBtn.disabled = false;
+            searchBtn.textContent = 'Search';
         });
-
-        if (data.items.length > 0) {
-            selectItem(data.items[0], results.querySelector('.result'));
-        }
     }
 
-    async function selectItem(item, card) {
+    function selectItem(item, card) {
         selected = item;
         if (activeCard) activeCard.classList.remove('active');
         activeCard = card || activeCard;
         if (activeCard) activeCard.classList.add('active');
         viewerTitle.textContent = item.title;
         viewerSubtitle.textContent = item.overview || 'No overview available.';
-        const provider = providerSelect.value;
-        const playbackUrl = `/MovieFlix/PlaybackUrl?tmdbId=${encodeURIComponent(item.tmdbId)}&mediaType=${encodeURIComponent(item.mediaType)}&provider=${encodeURIComponent(provider)}`;
-        const res = await fetch(playbackUrl);
-        playback = await res.json();
-        playSelectedInline();
+
+        viewerFrameWrap.classList.add('frame-wrap');
+        viewerFrameWrap.innerHTML = '<div class="empty">Loading player…</div>';
+
+        var prov = providerSelect.value;
+        var playbackUrl = '/MovieFlix/PlaybackUrl?tmdbId=' + encodeURIComponent(item.tmdbId) +
+            '&mediaType=' + encodeURIComponent(item.mediaType) +
+            '&provider=' + encodeURIComponent(prov);
+
+        fetch(playbackUrl).then(function (res) {
+            if (!res.ok) return res.text().then(function (t) { throw new Error(t || 'HTTP ' + res.status); });
+            return res.json();
+        }).then(function (data) {
+            playback = data;
+            if (!data.embedUrl) {
+                viewerFrameWrap.innerHTML = '<div class="empty">No playback URL available.</div>';
+                return;
+            }
+            viewerFrameWrap.innerHTML = '<iframe src="' + data.embedUrl + '" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe>';
+        }).catch(function (err) {
+            playback = null;
+            var msg = (err && err.message) ? err.message : 'Failed to load player.';
+            viewerFrameWrap.innerHTML = '<div class="empty">' + escHtml(msg) + '</div>';
+        });
     }
 
     function playSelectedInline() {
         if (!selected || !playback || !playback.embedUrl) return;
-        viewerFrameWrap.className = '';
-        viewerFrameWrap.innerHTML = `<iframe src="${playback.embedUrl}" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+        viewerFrameWrap.classList.add('frame-wrap');
+        viewerFrameWrap.innerHTML = '<iframe src="' + playback.embedUrl + '" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe>';
     }
 
     function openSelectedMovieFlix() {
@@ -112,8 +147,14 @@
         window.open(playback.watchUrl, '_blank', 'noopener,noreferrer');
     }
 
+    function escHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
     function init() {
-        const state = readState();
+        var state = readState();
         queryInput.value = state.query;
         mediaTypeSelect.value = state.mediaType;
         providerSelect.value = state.provider;

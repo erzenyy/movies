@@ -25,7 +25,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     /// Gets or sets a value indicating whether community providers are enabled.
     /// </summary>
-    public bool EnableCommunityProviders { get; set; } = false;
+    public bool EnableCommunityProviders { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether TV results should be included in multi-search.

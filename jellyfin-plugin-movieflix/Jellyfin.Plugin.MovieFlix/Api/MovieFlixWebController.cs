@@ -29,8 +29,7 @@ public class MovieFlixWebController : ControllerBase
     {
         var config = Plugin.Instance?.Configuration ?? new PluginConfiguration();
         var payload = ReadEmbeddedText("integration.js")
-            .Replace("__MOVIEFLIX_PUBLIC_URL__", config.PublicBaseUrl.TrimEnd('/'))
-            .Replace("__MOVIEFLIX_PLUGIN_APP_URL__", "/MovieFlix/Web/App");
+            .Replace("__MOVIEFLIX_PUBLIC_URL__", config.PublicBaseUrl.TrimEnd('/'));
         return Content(payload, "application/javascript", Encoding.UTF8);
     }
 

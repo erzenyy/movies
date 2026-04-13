@@ -9,17 +9,10 @@ A Jellyfin companion plugin that adds MovieFlix-style search and playback endpoi
 - Exposes simple Jellyfin-side REST endpoints for search and playback handoff.
 - Provides a Jellyfin dashboard configuration page.
 
-## What It Does Not Yet Do
+## Current Limitations
 
-- It does not automatically inject a full custom browsing experience into every Jellyfin client.
-- It does not bundle a custom Jellyfin web UI modification.
 - It does not compile in this repository yet because the local machine does not currently have the `.NET` SDK installed.
-
-This project is intentionally built as a clean plugin foundation so you can:
-
-1. compile and install it in Jellyfin,
-2. call its endpoints from a custom Jellyfin web integration,
-3. extend it later into channels or deeper UI integration.
+- The integration targets the Jellyfin **web** client only (not native apps like Android TV, iOS, etc.).
 
 ## Official References Used
 
@@ -78,16 +71,19 @@ The release workflow now updates that file automatically and preserves version h
 
 After installing the plugin, these Jellyfin-hosted pages become available:
 
-- `/MovieFlix/Web/App`
-- `/MovieFlix/Web/Integration.js`
+- `/MovieFlix/Web/App` — standalone search + player page (fallback / testing)
+- `/MovieFlix/Web/Integration.js` — native Jellyfin integration script
 
 Recommended path:
 
-1. Open `/MovieFlix/Web/App` directly once to verify search and playback
-2. Use a Jellyfin web custom-JS injector plugin to inject `/MovieFlix/Web/Integration.js`
-3. That adds a `MovieFlix` item into the Jellyfin web sidebar
-4. Clicking it routes to `#!/movieflix` and opens MovieFlix inside the Jellyfin shell
-5. Vidking remains the first-class provider inside the integrated view
+1. Use a Jellyfin web custom-JS injector plugin to inject `/MovieFlix/Web/Integration.js`
+2. That adds a **MovieFlix** item into the Jellyfin web sidebar
+3. Clicking it opens a **native full-screen search + player UI** directly inside Jellyfin
+4. Search queries hit the plugin's `/MovieFlix/Search` API (backed by TMDB)
+5. Playback loads a **single direct embed iframe** — no nested iframes, no external app pages
+6. Provider switching (Vidking, VidSrc, MultiEmbed, MoviesAPI) works inline
+7. Press **Escape** or click **← Back to Jellyfin** to return to the normal Jellyfin UI
+8. `/MovieFlix/Web/App` remains available as a standalone page for testing outside Jellyfin
 
 ## Install Notes
 

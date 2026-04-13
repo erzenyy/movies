@@ -10,7 +10,18 @@ namespace Jellyfin.Plugin.MovieFlix.Services;
 /// </summary>
 public sealed class MovieFlixService
 {
-    private static readonly HttpClient HttpClient = new();
+    private static readonly HttpClient HttpClient = CreateHttpClient();
+
+    private static HttpClient CreateHttpClient()
+    {
+        var client = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Jellyfin-MovieFlix-Plugin/0.2 (+https://github.com/erzenyy/movies)");
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        return client;
+    }
 
     /// <summary>
     /// Search TMDB for movies and TV shows.
@@ -23,7 +34,7 @@ public sealed class MovieFlixService
     {
         if (string.IsNullOrWhiteSpace(config.TmdbApiKey))
         {
-            throw new InvalidOperationException("TMDB API key is not configured.");
+            throw new InvalidOperationException("TMDB API key is not configured. Set it in the MovieFlix plugin settings.");
         }
 
         var normalizedQuery = query.Trim();
@@ -40,9 +51,30 @@ public sealed class MovieFlixService
         };
 
         var url =
-            $"https://api.themoviedb.org/3/search/{endpoint}?api_key={Uri.EscapeDataString(config.TmdbApiKey)}&language=en-US&query={Uri.EscapeDataString(normalizedQuery)}";
+            $"https://api.themoviedb.org/3/search/{endpoint}?api_key={Uri.EscapeDataString(config.TmdbApiKey)}&language=en-US&page=1&query={Uri.EscapeDataString(normalizedQuery)}";
 
-        var payload = await HttpClient.GetFromJsonAsync<TmdbSearchResponse>(url, cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage response;
+        try
+        {
+            response = await HttpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new HttpRequestException("TMDB request timed out. Try again.");
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var status = (int)response.StatusCode;
+            throw status switch
+            {
+                401 => new InvalidOperationException("TMDB API key is invalid. Check the MovieFlix plugin settings."),
+                429 => new HttpRequestException("TMDB rate limit reached. Wait a moment and try again."),
+                _ => new HttpRequestException($"TMDB returned HTTP {status}.")
+            };
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
         var items = (payload?.Results ?? [])
             .Where(item => item.Id > 0)
             .Where(item => item.MediaType is "movie" or "tv" || endpoint != "multi")

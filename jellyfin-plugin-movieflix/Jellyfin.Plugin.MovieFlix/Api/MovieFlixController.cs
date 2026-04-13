@@ -62,12 +62,18 @@ public class MovieFlixController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            _logger.LogWarning(ex, "MovieFlix config issue during search for {Query}", query);
             return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "MovieFlix TMDB request failed for query {Query}", query);
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "MovieFlix search failed for query {Query}", query);
-            return StatusCode(StatusCodes.Status502BadGateway, "Search failed.");
+            return StatusCode(StatusCodes.Status502BadGateway, "Search failed. Check Jellyfin logs for details.");
         }
     }
 
