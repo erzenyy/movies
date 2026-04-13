@@ -83,9 +83,11 @@ After installing the plugin, these Jellyfin-hosted pages become available:
 
 Recommended path:
 
-1. Open `/MovieFlix/Web/App` directly to verify search and playback
-2. If you use a Jellyfin web custom-JS injector plugin, inject `/MovieFlix/Web/Integration.js`
-3. That adds a `MovieFlix` link into the Jellyfin web UI
+1. Open `/MovieFlix/Web/App` directly once to verify search and playback
+2. Use a Jellyfin web custom-JS injector plugin to inject `/MovieFlix/Web/Integration.js`
+3. That adds a `MovieFlix` item into the Jellyfin web sidebar
+4. Clicking it routes to `#!/movieflix` and opens MovieFlix inside the Jellyfin shell
+5. Vidking remains the first-class provider inside the integrated view
 
 ## Install Notes
 

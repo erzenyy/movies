@@ -7,11 +7,12 @@
     <style>
         :root {
             color-scheme: dark;
-            --bg: #0b0b0c;
-            --panel: #101012;
+            --bg: #101114;
+            --surface: #18191c;
+            --surface-2: #1f2024;
             --line: rgba(255,255,255,0.08);
-            --text: #f4f4f5;
-            --muted: #9f9fa9;
+            --text: #f5f5f5;
+            --muted: #a1a1aa;
             --accent: #e50914;
         }
         * { box-sizing: border-box; }
@@ -22,20 +23,22 @@
             color: var(--text);
             font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
         }
-        body {
-            display: grid;
-            grid-template-rows: auto 1fr;
+        body.embedded {
+            background: transparent;
         }
         .shell {
-            max-width: 1400px;
+            max-width: 1440px;
             margin: 0 auto;
             width: 100%;
-            padding: 0 20px 28px;
+            padding: 0 24px 24px;
         }
         .topbar {
             border-bottom: 1px solid var(--line);
-            background: rgba(8, 8, 9, 0.94);
+            background: rgba(12, 12, 14, 0.92);
             backdrop-filter: blur(8px);
+        }
+        body.embedded .topbar {
+            display: none;
         }
         .toolbar {
             display: grid;
@@ -55,15 +58,40 @@
             color: var(--muted);
             font-size: 13px;
         }
-        .search {
+        .layout {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 150px 110px;
+            grid-template-columns: 360px minmax(0, 1fr);
+            gap: 18px;
+            padding-top: 18px;
+        }
+        body.embedded .layout {
+            padding-top: 0;
+            grid-template-columns: 320px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .rail, .viewer {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            min-height: 0;
+        }
+        .panel-head {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        .search-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 120px;
             gap: 10px;
+            margin-top: 12px;
+        }
+        .search-grid.secondary {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            margin-top: 10px;
         }
         input, select, button {
             height: 42px;
             border: 1px solid var(--line);
-            background: #111114;
+            background: var(--surface-2);
             color: var(--text);
             padding: 0 12px;
             font: inherit;
@@ -74,33 +102,37 @@
             font-weight: 600;
             cursor: pointer;
         }
-        .content {
+        button.secondary {
+            background: var(--surface-2);
+            border-color: var(--line);
+            color: var(--text);
+        }
+        .result-list {
+            overflow: auto;
+            max-height: min(70vh, calc(100vh - 260px));
+        }
+        body.embedded .result-list {
+            max-height: calc(100vh - 180px);
+        }
+        .result {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
-            gap: 20px;
-            padding-top: 20px;
-        }
-        .results {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 14px;
-            align-content: start;
-        }
-        .card {
-            border: 1px solid var(--line);
-            background: var(--panel);
-            cursor: pointer;
-            overflow: hidden;
-        }
-        .poster {
-            aspect-ratio: 2 / 3;
-            background: #18181b;
+            grid-template-columns: 52px minmax(0, 1fr);
+            gap: 12px;
             width: 100%;
-            object-fit: cover;
-            display: block;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--line);
+            background: transparent;
+            text-align: left;
         }
-        .meta {
-            padding: 10px;
+        .result:hover,
+        .result.active {
+            background: rgba(255,255,255,0.04);
+        }
+        .thumb {
+            width: 52px;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            background: #23242a;
         }
         .title {
             font-size: 13px;
@@ -108,33 +140,41 @@
             line-height: 1.35;
         }
         .line {
-            margin-top: 6px;
-            color: var(--muted);
+            margin-top: 4px;
             font-size: 12px;
+            color: var(--muted);
         }
         .viewer {
-            border: 1px solid var(--line);
-            background: #0d0d0f;
-            min-height: 420px;
             display: grid;
             grid-template-rows: auto auto 1fr;
+            min-height: min(70vh, calc(100vh - 130px));
+        }
+        body.embedded .viewer {
+            min-height: calc(100vh - 2px);
         }
         .viewer-head {
-            padding: 16px;
+            padding: 16px 18px;
             border-bottom: 1px solid var(--line);
+        }
+        .viewer-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
         }
         .viewer-actions {
             display: flex;
             gap: 8px;
-            padding: 12px 16px;
+            padding: 12px 18px;
             border-bottom: 1px solid var(--line);
         }
-        .viewer-actions button.secondary {
-            background: #111114;
-            border-color: var(--line);
-            color: var(--text);
+        .frame-wrap {
+            position: relative;
+            min-height: 360px;
+            background: #000;
         }
         iframe {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             border: 0;
@@ -144,13 +184,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            height: 100%;
             color: var(--muted);
             padding: 24px;
             text-align: center;
         }
         @media (max-width: 980px) {
-            .content { grid-template-columns: 1fr; }
-            .toolbar, .search { grid-template-columns: 1fr; }
+            .toolbar { grid-template-columns: 1fr; }
+            .layout { grid-template-columns: 1fr; }
+            .result-list { max-height: none; }
+            .viewer { min-height: 520px; }
         }
     </style>
 </head>
@@ -160,42 +203,64 @@
             <div class="toolbar">
                 <div>
                     <div class="brand">Movie<span>Flix</span> for Jellyfin</div>
-                    <div class="subtle">Search TMDB, then play with Vidking or the same backup providers used in the web app.</div>
+                    <div class="subtle">Search TMDB, then play through Vidking first or the same backup providers used by MovieFlix.</div>
                 </div>
-                <div class="search">
+                <div></div>
+                <div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="shell layout">
+        <section class="rail">
+            <div class="panel-head">
+                <div class="title" style="font-size:16px">Search</div>
+                <div class="search-grid">
                     <input id="query" type="search" placeholder="Search movies or series" />
+                    <button id="searchBtn" type="button">Search</button>
+                </div>
+                <div class="search-grid secondary">
                     <select id="mediaType">
                         <option value="">All</option>
                         <option value="movie">Movies</option>
                         <option value="tv">TV</option>
                     </select>
-                    <button id="searchBtn" type="button">Search</button>
+                    <select id="provider">
+                        <option value="vidking">Vidking</option>
+                        <option value="vidsrc">VidSrc</option>
+                        <option value="multiembed">MultiEmbed</option>
+                        <option value="moviesapi">MoviesAPI</option>
+                    </select>
                 </div>
-                <select id="provider">
-                    <option value="vidking">Vidking</option>
-                    <option value="vidsrc">VidSrc</option>
-                    <option value="multiembed">MultiEmbed</option>
-                    <option value="moviesapi">MoviesAPI</option>
-                </select>
             </div>
-        </div>
-    </div>
+            <div id="results" class="result-list">
+                <div class="empty">Search for a title to begin.</div>
+            </div>
+        </section>
 
-    <div class="shell content">
-        <div id="results" class="results"></div>
-        <div class="viewer">
+        <section class="viewer">
             <div class="viewer-head">
-                <div id="viewerTitle" class="brand" style="font-size:18px">Select a title</div>
-                <div id="viewerSubtitle" class="subtle">The selected title will load here for playback.</div>
+                <div id="viewerTitle" class="viewer-title">Select a title</div>
+                <div id="viewerSubtitle" class="subtle">Playback will load inside this view.</div>
             </div>
             <div class="viewer-actions">
                 <button id="playInline" type="button">Play Here</button>
                 <button id="openMovieFlix" type="button" class="secondary">Open in MovieFlix</button>
             </div>
-            <div id="viewerFrameWrap" class="empty">Search for something, then choose a title.</div>
-        </div>
+            <div id="viewerFrameWrap" class="frame-wrap">
+                <div class="empty">Pick a result from the left rail.</div>
+            </div>
+        </section>
     </div>
 
+    <script>
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('embedded') === '1') {
+                document.body.classList.add('embedded');
+            }
+        })();
+    </script>
     <script src="/MovieFlix/Web/Client.js"></script>
 </body>
 </html>
