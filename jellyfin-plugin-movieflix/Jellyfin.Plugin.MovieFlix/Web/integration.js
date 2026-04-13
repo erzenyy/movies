@@ -12,7 +12,7 @@
 
     var _rawPublicUrl = '__MOVIEFLIX_PUBLIC_URL__';
     var PUBLIC_URL = (_rawPublicUrl && _rawPublicUrl.indexOf('__') !== 0) ? _rawPublicUrl : '';
-    var ROUTE = '#!/movieflix';
+    var ROUTE = '#movieflix';
     var API = '/MovieFlix';
     var STORAGE_KEY = 'movieflix-jf-provider';
     var PROVIDERS = [
